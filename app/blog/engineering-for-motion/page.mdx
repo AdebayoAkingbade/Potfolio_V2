@@ -1,0 +1,36 @@
+export const metadata = {
+  title: "Engineering for Motion Without Burning the Main Thread",
+  description:
+    "A practical framework for adding expressive interaction while preserving responsiveness and accessibility.",
+};
+
+<main className="container section-pad pt-32">
+
+# Engineering for Motion Without Burning the Main Thread
+
+Motion is not decoration. In a mature product, motion clarifies state, guides attention, and
+helps people trust that the system responded to them.
+
+The simplest rule I use is this: every animation should either explain a relationship, soften a
+state change, or make a workflow feel more direct. If it does not serve one of those jobs, it is
+probably competing with the work.
+
+## Keep The Critical Path Boring
+
+The best motion architecture keeps heavy effects away from the initial route. Static content,
+semantic structure, and meaningful controls should render first. Canvas, WebGL, charts, command
+palettes, and experimental surfaces can arrive through dynamic imports once the page is useful.
+
+## Animate Transform And Opacity
+
+Transform and opacity are still the safest primitives for high-frequency UI motion. Layout
+animations are powerful, but they need constraints: stable dimensions, measured containers, and
+short durations.
+
+## Respect Reduced Motion
+
+Reduced motion support is not a toggle for removing delight. It is a way to preserve orientation
+for people who experience motion differently. Fade, instant state changes, and clear focus states
+can still feel polished.
+
+</main>
