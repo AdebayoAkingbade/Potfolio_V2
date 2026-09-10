@@ -25,7 +25,7 @@ Jan 2024 - May 2026
 - Built and scaled fintech onboarding systems used across 30+ countries, supporting thousands of daily users.
 - Translated business requirements into maintainable applications across Java Spring Boot, Next.js, React, and Angular.
 - Designed and implemented SSO and role-based access control to improve security and access management.
-- Developed an AI-powered chatbot with Python and NLP to automate customer support workflows and reduce response time.
+- Developed AI-powered automation workflows with Python and NLP to streamline customer support operations.
 - Led core admin portal development for Ecobank Business App and Mobile 5 platforms across onboarding, requests, audit trails, campaigns, and document configuration.
 - Built configurable feature controls and maker-checker workflows for sensitive financial operations.
 - Built real-time notification systems to improve operational response.
@@ -52,18 +52,18 @@ Jan 2024 - May 2026
 
 - Co-developed a Web3 finance platform and contributed over 50% of the admin dashboard features.
 - Worked with GraphQL APIs and Dockerized environments.
-- Built a full-stack fitness e-commerce app with payments, bookings, and user workflows.
+- Built full-stack product workflows across admin dashboards, platform features, and user-facing experiences.
 
 ## Selected Projects
 
 - Ecobank Business App and Mobile 5 Admin: Onboarding, request management, audit trails, campaign management, document configuration, feature controls, and maker-checker workflows.
-- AI Chatbot, Ecobank: AI-powered support assistant for account queries, transactions, and support automation.
+- AGuard AI Filter: AI filtering layer for detecting, moderating, and routing unsafe or unwanted content. https://github.com/AdebayoAkingbade/AGuard
 - Document Management System, Ecobank: End-to-end document management across Ecobank digital channels, designed to support RPC workflows.
 - Referral and Rewards System, Ecobank: Rewards administration system for referrers who bring new users to Ecobank mobile platforms.
-- Belrald School Management: Authentication, authorization, onboarding, recovery, and dynamic RBAC for institutions and staff.
-- Fitness E-commerce App: Full-stack React, Spring Boot, and Firebase app with payments, booking, and user workflows. https://fitnessoapp1.web.app
-- OSTEC-SE Cybersecurity Platform: https://ostec-se.vercel.app/
-- Nigeria-First AI Ops Copilot: https://nigeria-first-ai-ops-copilot.vercel.app/
+- Belrald School Management: Authentication, authorization, onboarding, recovery, and dynamic RBAC for institutions and staff. https://belrald.com/
+- Àwárí - Autonomous Root-Cause Engineering: AI agent investigating 14 correlated signals across 3 services. https://github.com/AdebayoAkingbade/Awari
+- OSTEC-SE Cybersecurity Platform: https://ostec-se.vercel.app/board-reports
+- Kudipal: Nigeria's first WhatsApp SME platform. https://nigeria-first-ai-ops-copilot.vercel.app/
 
 ## Core Skills
 

@@ -25,7 +25,7 @@ const timeline = [
   ],
   [
     "2024-2026",
-    "Built Ecobank fintech onboarding, admin, SSO, RBAC, notification, and AI chatbot systems used across 30+ affiliates.",
+    "Built Ecobank fintech onboarding, admin, SSO, RBAC, notification, and AI automation systems used across 30+ affiliates.",
   ],
 ];
 
