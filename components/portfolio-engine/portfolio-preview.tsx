@@ -6,7 +6,9 @@ import {
   Mail,
   MapPin,
   Phone,
+  PlayCircle,
   Sparkles,
+  Users,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -35,6 +37,7 @@ export function PortfolioPreview({
   const score = "score" in portfolio ? portfolio.score : calculatePortfolioScore(portfolio);
   const basics = portfolio.basics;
   const contactHref = basics.email ? `mailto:${basics.email}` : basics.socialLinks[0]?.url;
+  const profilePhotoSrc = basics.profilePhoto?.url ?? basics.profilePhoto?.dataUrl;
 
   return (
     <article className="overflow-hidden rounded-lg border border-border bg-card">
@@ -46,6 +49,8 @@ export function PortfolioPreview({
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{profession.label}</Badge>
               <Badge variant="secondary">{template.name}</Badge>
+              {template.category === "marketplace" ? <Badge variant="outline">Marketplace</Badge> : null}
+              {portfolio.plan === "pro" ? <Badge variant="outline">Pro</Badge> : null}
               <Badge variant="outline">{score.score}/100</Badge>
             </div>
             <h1 className="mt-6 text-balance font-display text-4xl font-semibold md:text-6xl">
@@ -81,12 +86,18 @@ export function PortfolioPreview({
                   {basics.phone}
                 </a>
               ) : null}
+              {portfolio.customDomain?.hostname ? (
+                <span className="inline-flex items-center gap-2">
+                  <Globe2 className="h-4 w-4 text-primary" />
+                  {portfolio.customDomain.hostname}
+                </span>
+              ) : null}
             </div>
           </div>
 
-          {basics.profilePhoto ? (
+          {profilePhotoSrc ? (
             <Image
-              src={basics.profilePhoto.dataUrl}
+              src={profilePhotoSrc}
               alt={`${basics.name || "Portfolio"} profile`}
               width={144}
               height={144}
@@ -165,6 +176,12 @@ export function PortfolioPreview({
               <ArrowUpRight className="h-4 w-4" />
             </a>
           ) : null}
+          {portfolio.team.agencyMode ? (
+            <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="h-4 w-4 text-primary" />
+              {portfolio.team.members.length} collaborators
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -185,6 +202,31 @@ export function PortfolioPreview({
               </p>
               {project.outcome ? (
                 <p className="mt-3 text-sm text-primary">{project.outcome}</p>
+              ) : null}
+              {project.videos.length ? (
+                <div className="mt-4 grid gap-3">
+                  {project.videos.slice(0, compact ? 1 : 3).map((video) => {
+                    const videoSrc = video.url ?? video.dataUrl;
+                    return videoSrc ? (
+                      <div key={video.id} className="overflow-hidden rounded-md border border-border">
+                        <video
+                          controls
+                          preload="metadata"
+                          src={videoSrc}
+                          className="aspect-video w-full bg-muted object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        key={video.id}
+                        className="flex items-center gap-2 rounded-md border border-border p-3 text-sm text-muted-foreground"
+                      >
+                        <PlayCircle className="h-4 w-4 text-primary" />
+                        {video.name}
+                      </div>
+                    );
+                  })}
+                </div>
               ) : null}
               <div className="mt-4 flex flex-wrap gap-3">
                 {project.links.map((link) => (

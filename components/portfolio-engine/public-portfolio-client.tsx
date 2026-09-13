@@ -38,9 +38,8 @@ export function PublicPortfolioClient({ slug }: { slug: string }) {
         <div className="mt-8 rounded-lg border border-border bg-card p-8">
           <h1 className="font-display text-3xl font-semibold">Portfolio unavailable</h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            This V1 local publication is only available in the browser where it was published.
-            The route is ready for database-backed public publishing in the next infrastructure
-            step.
+            This local publication is only available in the browser where it was published.
+            Server-backed portfolios publish from signed-in accounts.
           </p>
         </div>
       </main>

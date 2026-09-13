@@ -4,6 +4,6 @@ export function publishedPortfolioPath(slug: string) {
   return `/p/${slug}`;
 }
 
-export function publishedPortfolioTag(portfolioId: string, version: number) {
-  return `portfolio:${portfolioId}:published:${version}`;
+export function publishedPortfolioTag(slug: string) {
+  return `portfolio-engine:published:${slug}`;
 }

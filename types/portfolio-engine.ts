@@ -22,7 +22,85 @@ export type ProfessionKey =
   | "healthcare"
   | "entrepreneurs";
 
-export type PortfolioTemplateId = "signal" | "atelier" | "ledger" | "stage";
+export type PortfolioTemplateId =
+  | "signal"
+  | "atelier"
+  | "ledger"
+  | "stage"
+  | "operator"
+  | "gallery"
+  | "pitch"
+  | "agency";
+
+export type PortfolioPlan = "free" | "pro";
+
+export type PortfolioImportSource = "resume" | "github" | "clone";
+
+export type PortfolioImportRecord = {
+  id: string;
+  source: PortfolioImportSource;
+  label: string;
+  status: "imported" | "partial" | "failed";
+  detail: string;
+  importedAt: string;
+};
+
+export type PortfolioCustomDomain = {
+  hostname: string;
+  status: "not-configured" | "pending-verification" | "active" | "error";
+  verificationToken: string;
+  target: string;
+  connectedAt?: string;
+  lastCheckedAt?: string;
+  error?: string;
+};
+
+export type PortfolioAnalyticsDatum = {
+  label: string;
+  value: number;
+};
+
+export type PortfolioAnalyticsTrend = {
+  date: string;
+  views: number;
+  visitors: number;
+};
+
+export type PortfolioAnalyticsSummary = {
+  views: number;
+  visitors: number;
+  clicks: number;
+  leads: number;
+  avgReadSeconds: number;
+  topReferrers: PortfolioAnalyticsDatum[];
+  topSections: PortfolioAnalyticsDatum[];
+  trend: PortfolioAnalyticsTrend[];
+};
+
+export type PortfolioTeamRole = "owner" | "admin" | "editor" | "viewer";
+
+export type PortfolioTeamMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: PortfolioTeamRole;
+  status: "active" | "invited";
+  invitedAt?: string;
+};
+
+export type PortfolioTeam = {
+  id: string;
+  name: string;
+  agencyMode: boolean;
+  seats: number;
+  members: PortfolioTeamMember[];
+};
+
+export type PortfolioExportSettings = {
+  allowClone: boolean;
+  preferredFormat: "json" | "html";
+  lastExportedAt?: string;
+};
 
 export type ContactPreference = "email" | "linkedin" | "website" | "phone";
 
@@ -31,7 +109,17 @@ export type PortfolioAsset = {
   name: string;
   mimeType: string;
   size: number;
-  dataUrl: string;
+  kind?: "image" | "video" | "document";
+  dataUrl?: string;
+  url?: string;
+  pathname?: string;
+  storageProvider?: "local" | "supabase";
+};
+
+export type PortfolioVideoAsset = PortfolioAsset & {
+  kind: "video";
+  durationSeconds?: number;
+  posterUrl?: string;
 };
 
 export type PortfolioSocialLink = {
@@ -70,10 +158,13 @@ export type PortfolioProject = {
   challenge: string;
   outcome: string;
   links: PortfolioSocialLink[];
+  videos: PortfolioVideoAsset[];
 };
 
 export type PortfolioDraft = {
+  portfolioVersion: 2;
   id: string;
+  plan: PortfolioPlan;
   profession: ProfessionKey;
   templateId: PortfolioTemplateId;
   slug: string;
@@ -81,11 +172,16 @@ export type PortfolioDraft = {
   skills: string[];
   experience: PortfolioExperience[];
   projects: PortfolioProject[];
+  imports: PortfolioImportRecord[];
+  customDomain?: PortfolioCustomDomain;
+  analytics: PortfolioAnalyticsSummary;
+  team: PortfolioTeam;
+  exportSettings: PortfolioExportSettings;
   createdAt: string;
   updatedAt: string;
 };
 
-export type PublishedPortfolio = Omit<PortfolioDraft, "updatedAt"> & {
+export type PublishedPortfolio = PortfolioDraft & {
   publicationId: string;
   sourceDraftId: string;
   version: number;
@@ -132,6 +228,13 @@ export type PortfolioTemplate = {
   bestFor: string[];
   accentClass: string;
   previewClass: string;
+  tier: PortfolioPlan;
+  category: "core" | "marketplace";
+  creatorName: string;
+  marketplaceBadge?: string;
+  priceUsd?: number;
+  supportsVideo?: boolean;
+  usageCount?: number;
 };
 
 export type DraftValidationResult = {

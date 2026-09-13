@@ -1,4 +1,6 @@
 import type { PortfolioDraft, PublishedPortfolio } from "@/types/portfolio-engine";
+import { calculatePortfolioScore } from "@/lib/portfolio-engine/scoring";
+import { coercePortfolioDraft } from "@/lib/portfolio-engine/validation";
 
 const DRAFTS_KEY = "portfolio-engine:drafts:v1";
 const ACTIVE_DRAFT_KEY = "portfolio-engine:active-draft:v1";
@@ -21,7 +23,9 @@ function writeJson<T>(key: string, value: T) {
 }
 
 export function loadDrafts() {
-  return readJson<PortfolioDraft[]>(DRAFTS_KEY, []);
+  return readJson<unknown[]>(DRAFTS_KEY, [])
+    .map(coercePortfolioDraft)
+    .filter((draft): draft is PortfolioDraft => Boolean(draft));
 }
 
 export function loadDraft(draftId: string) {
@@ -46,7 +50,30 @@ export function saveDraft(draft: PortfolioDraft) {
 }
 
 export function loadPublications() {
-  return readJson<PublishedPortfolio[]>(PUBLICATIONS_KEY, []);
+  return readJson<unknown[]>(PUBLICATIONS_KEY, [])
+    .map((value) => {
+      const draft = coercePortfolioDraft(value);
+      if (!draft || !value || typeof value !== "object") return null;
+
+      const record = value as Record<string, unknown>;
+      const publishedAt =
+        typeof record.publishedAt === "string" ? record.publishedAt : draft.updatedAt;
+
+      return {
+        ...draft,
+        publicationId:
+          typeof record.publicationId === "string" ? record.publicationId : crypto.randomUUID(),
+        sourceDraftId:
+          typeof record.sourceDraftId === "string" ? record.sourceDraftId : draft.id,
+        version: typeof record.version === "number" ? record.version : 1,
+        publishedAt,
+        score:
+          record.score && typeof record.score === "object"
+            ? (record.score as PublishedPortfolio["score"])
+            : calculatePortfolioScore(draft),
+      };
+    })
+    .filter((publication): publication is PublishedPortfolio => Boolean(publication));
 }
 
 export function savePublication(publication: PublishedPortfolio) {
