@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export function Navbar({ onOpenCommand }: { onOpenCommand?: () => void }) {
-  const ids = navItems.map((item) => item.href.replace("#", ""));
+  const sectionItems = navItems.filter((item) => item.href.startsWith("#"));
+  const ids = sectionItems.map((item) => item.href.replace("#", ""));
   const activeSection = useActiveSection(ids);
   const direction = useScrollDirection();
 
@@ -40,13 +41,14 @@ export function Navbar({ onOpenCommand }: { onOpenCommand?: () => void }) {
 
         <div className="hidden items-center gap-1 md:flex">
           {navItems.map((item) => {
-            const id = item.href.replace("#", "");
-            const active = activeSection === id;
+            const isSection = item.href.startsWith("#");
+            const id = isSection ? item.href.replace("#", "") : "";
+            const active = isSection && activeSection === id;
 
             return (
               <Link
                 key={item.href}
-                href={`/${item.href}`}
+                href={isSection ? `/${item.href}` : item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative rounded-md px-3 py-2 text-sm text-muted-foreground transition hover:text-foreground",

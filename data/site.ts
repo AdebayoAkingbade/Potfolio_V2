@@ -28,6 +28,7 @@ export const navItems = [
   { label: "About", href: "#about" },
   { label: "Skills", href: "#skills" },
   { label: "Experience", href: "#experience" },
+  { label: "Engine", href: "/portfolio-engine" },
   { label: "Projects", href: "#projects" },
   { label: "Writing", href: "#blog" },
   { label: "Contact", href: "#contact" },
