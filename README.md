@@ -70,3 +70,20 @@ Generated project-bound assets live at:
 
 The app is ready for Vercel. Set `NEXT_PUBLIC_SITE_URL` to your production domain so canonical
 URLs and social image links resolve correctly.
+
+Portfolio Engine V2 also needs these Vercel environment variables:
+
+```text
+NEXT_PUBLIC_SITE_URL=https://akingbacrown.dev
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Supabase publishable/anon key>
+OPENAI_API_KEY=<OpenAI API key>
+PORTFOLIO_ENGINE_AI_MODEL=gpt-5-mini
+GITHUB_TOKEN=<GitHub personal access token>
+STRIPE_PRO_CHECKOUT_URL=<Stripe payment link or hosted checkout URL>
+```
+
+`OPENAI_API_KEY`, `GITHUB_TOKEN`, and `STRIPE_PRO_CHECKOUT_URL` are only required for AI writing,
+GitHub import rate limits/private import access, and the Pro checkout button respectively. Run
+`supabase/migrations/202609130001_portfolio_engine_v2.sql` in Supabase before enabling server
+persistence in production.

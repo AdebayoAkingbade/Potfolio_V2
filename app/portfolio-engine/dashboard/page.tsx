@@ -1,11 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Activity, ArrowLeft, BarChart3, Clock3, Globe2, MousePointerClick, Users } from "lucide-react";
+import {
+  Activity,
+  ArrowLeft,
+  BarChart3,
+  Download,
+  Github,
+  Globe2,
+  Linkedin,
+  Mail,
+  MousePointerClick,
+  Users,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createDemoAnalyticsSummary } from "@/lib/portfolio-engine/analytics";
+import { getPortfolioPlanLabel } from "@/lib/portfolio-engine/entitlements";
 import { getPortfolioEngineAuth } from "@/lib/portfolio-engine/server/auth";
 import {
   getActiveDraftForUser,
@@ -108,6 +120,31 @@ function RankedList({
   );
 }
 
+function buildAnalyticsAdvice(summary: PortfolioAnalyticsSummary) {
+  const advice: string[] = [];
+  const topProject = summary.topProjects[0];
+  const contactRate = summary.views ? Math.round((summary.contactClicks / summary.views) * 100) : 0;
+
+  if (topProject && summary.projectViews) {
+    const share = Math.round((topProject.value / summary.projectViews) * 100);
+    advice.push(`${topProject.label} gets ${share}% of your project views.`);
+  }
+
+  if (summary.views >= 10 && contactRate < 8) {
+    advice.push(
+      `${formatNumber(summary.views)} people viewed your portfolio, but only ${formatNumber(
+        summary.contactClicks,
+      )} clicked Contact. Consider making the primary CTA more visible.`,
+    );
+  }
+
+  if (summary.linkedinClicks > summary.githubClicks * 2 && summary.githubClicks < 5) {
+    advice.push("LinkedIn is getting more attention than GitHub. Put stronger project proof near your GitHub link.");
+  }
+
+  return advice.length ? advice : ["Your portfolio has enough baseline activity for clearer recommendations soon."];
+}
+
 export default async function PortfolioEngineDashboardPage() {
   const auth = await getPortfolioEngineAuth();
 
@@ -125,6 +162,7 @@ export default async function PortfolioEngineDashboardPage() {
       }))
     : { summary: createDemoAnalyticsSummary(), sample: true };
   const summary = analytics.summary;
+  const advice = buildAnalyticsAdvice(summary);
 
   return (
     <main className="min-h-screen pt-24">
@@ -140,7 +178,7 @@ export default async function PortfolioEngineDashboardPage() {
           <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex flex-wrap gap-2">
-                <Badge>{draft?.plan === "pro" ? "Pro analytics" : "Analytics"}</Badge>
+                <Badge>{draft ? getPortfolioPlanLabel(draft.plan) : "Analytics"}</Badge>
                 {analytics.sample ? <Badge variant="outline">Sample data</Badge> : null}
                 {draft?.customDomain?.hostname ? (
                   <Badge variant="secondary">{draft.customDomain.hostname}</Badge>
@@ -150,8 +188,8 @@ export default async function PortfolioEngineDashboardPage() {
                 Portfolio analytics
               </h1>
               <p className="mt-3 max-w-2xl text-muted-foreground">
-                Track portfolio visits, read depth, project clicks, lead intent, referrers, and
-                Pro growth signals from one dashboard.
+                Track portfolio views, visitors, project views, CV downloads, contact intent,
+                profile clicks, referrers, and practical growth signals from one dashboard.
               </p>
             </div>
             <Button asChild>
@@ -173,16 +211,43 @@ export default async function PortfolioEngineDashboardPage() {
               icon={<Users className="h-5 w-5" />}
             />
             <MetricCard
-              label="Clicks"
-              value={formatNumber(summary.clicks)}
-              detail="Outbound project, profile, and contact clicks ready for conversion tracking."
+              label="Project views"
+              value={formatNumber(summary.projectViews)}
+              detail="Project cards seen by public visitors during the current reporting window."
               icon={<MousePointerClick className="h-5 w-5" />}
             />
             <MetricCard
-              label="Avg. read"
-              value={`${formatNumber(summary.avgReadSeconds)}s`}
-              detail="Average measured session read time from published portfolio pages."
-              icon={<Clock3 className="h-5 w-5" />}
+              label="CV downloads"
+              value={formatNumber(summary.cvDownloads)}
+              detail="Resume or CV download intent from tracked portfolio links."
+              icon={<Download className="h-5 w-5" />}
+            />
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Contact clicks"
+              value={formatNumber(summary.contactClicks)}
+              detail="Email, phone, and primary contact clicks from published portfolios."
+              icon={<Mail className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="LinkedIn clicks"
+              value={formatNumber(summary.linkedinClicks)}
+              detail="Outbound LinkedIn profile engagement from public portfolio pages."
+              icon={<Linkedin className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="GitHub clicks"
+              value={formatNumber(summary.githubClicks)}
+              detail="Outbound GitHub profile or repository engagement from public pages."
+              icon={<Github className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="All clicks"
+              value={formatNumber(summary.clicks)}
+              detail="All tracked outbound portfolio actions combined."
+              icon={<MousePointerClick className="h-5 w-5" />}
             />
           </div>
 
@@ -198,10 +263,11 @@ export default async function PortfolioEngineDashboardPage() {
               <Globe2 className="h-5 w-5 text-primary" />
               <h2 className="mt-4 font-display text-2xl font-semibold">Growth setup</h2>
               <div className="mt-5 grid gap-3 text-sm text-muted-foreground">
-                <p>Plan: {draft?.plan === "pro" ? "Pro" : "Free"}</p>
+                <p>Plan: {draft ? getPortfolioPlanLabel(draft.plan) : "Not configured"}</p>
                 <p>Domain: {draft?.customDomain?.hostname ?? "Not connected"}</p>
                 <p>Team seats: {draft?.team.seats ?? 1}</p>
                 <p>Clone/export: {draft?.exportSettings.allowClone ? "Enabled" : "Private"}</p>
+                <p>Average read: {formatNumber(summary.avgReadSeconds)}s</p>
               </div>
             </article>
           </div>
@@ -209,6 +275,23 @@ export default async function PortfolioEngineDashboardPage() {
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <RankedList label="Top referrers" items={summary.topReferrers} />
             <RankedList label="Top sections" items={summary.topSections} />
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <RankedList label="Most viewed projects" items={summary.topProjects} />
+            <article className="rounded-lg border border-border bg-card p-5">
+              <h2 className="font-display text-2xl font-semibold">Contextual advice</h2>
+              <div className="mt-5 grid gap-3">
+                {advice.map((item) => (
+                  <p
+                    key={item}
+                    className="rounded-md border border-border bg-background/60 p-3 text-sm text-muted-foreground"
+                  >
+                    {item}
+                  </p>
+                ))}
+              </div>
+            </article>
           </div>
         </div>
       </section>

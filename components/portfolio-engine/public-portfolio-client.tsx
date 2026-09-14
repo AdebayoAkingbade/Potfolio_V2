@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { PortfolioPreview } from "@/components/portfolio-engine/portfolio-preview";
 import { Button } from "@/components/ui/button";
+import { hasPortfolioFeature } from "@/lib/portfolio-engine/entitlements";
 import { loadPublicationBySlug } from "@/lib/portfolio-engine/storage";
 import type { PublishedPortfolio } from "@/types/portfolio-engine";
 
@@ -48,14 +49,16 @@ export function PublicPortfolioClient({ slug }: { slug: string }) {
 
   return (
     <main className="min-h-screen pt-24">
-      <div className="container pb-8">
-        <Button asChild variant="outline">
-          <Link href="/portfolio-engine">
-            <ArrowLeft className="h-4 w-4" />
-            Built with Portfolio Engine
-          </Link>
-        </Button>
-      </div>
+      {!hasPortfolioFeature(portfolio, "removeBranding") ? (
+        <div className="container pb-8">
+          <Button asChild variant="outline">
+            <Link href="/portfolio-engine">
+              <ArrowLeft className="h-4 w-4" />
+              Built with Portfolio Engine
+            </Link>
+          </Button>
+        </div>
+      ) : null}
       <div className="container pb-20">
         <PortfolioPreview portfolio={portfolio} />
       </div>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 
 import { createSupabasePublicServerClient } from "@/lib/supabase/server";
 
@@ -12,7 +13,10 @@ function errorResponse(message: string, status: number) {
 function visitorHash(request: Request) {
   const forwardedFor = request.headers.get("x-forwarded-for") ?? "";
   const agent = request.headers.get("user-agent") ?? "";
-  return Buffer.from(`${forwardedFor.split(",")[0]}:${agent}`).toString("base64").slice(0, 80);
+  return createHash("sha256")
+    .update(`${forwardedFor.split(",")[0]}:${agent}`)
+    .digest("hex")
+    .slice(0, 80);
 }
 
 function referrerHostname(value: string | null) {
@@ -36,7 +40,9 @@ export async function POST(request: Request) {
       ? body.eventType
       : "view";
   const section =
-    body && typeof body === "object" && typeof body.section === "string" ? body.section : null;
+    body && typeof body === "object" && typeof body.section === "string"
+      ? body.section.slice(0, 120)
+      : null;
   const readSeconds =
     body && typeof body === "object" && typeof body.readSeconds === "number"
       ? Math.max(0, Math.round(body.readSeconds))

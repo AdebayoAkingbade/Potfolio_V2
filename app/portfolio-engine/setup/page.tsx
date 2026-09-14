@@ -35,6 +35,7 @@ export default function PortfolioEngineSetupPage() {
               supabase/migrations, and set the environment variables below.
             </p>
             <div className="mt-6 grid gap-3 rounded-md border border-border bg-background/60 p-4 font-mono text-sm">
+              <span>NEXT_PUBLIC_SITE_URL=https://akingbacrown.dev</span>
               <span>NEXT_PUBLIC_SUPABASE_URL=...</span>
               <span>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...</span>
               <span>OPENAI_API_KEY=...</span>

@@ -2,8 +2,10 @@ import type {
   PortfolioAnalyticsDatum,
   PortfolioAnalyticsSummary,
   PortfolioAsset,
+  PortfolioCertification,
   PortfolioCustomDomain,
   PortfolioDraft,
+  PortfolioEducation,
   PortfolioExportSettings,
   PortfolioExperience,
   PortfolioImportRecord,
@@ -13,6 +15,7 @@ import type {
   PortfolioTeamMember,
   PortfolioVideoAsset,
 } from "@/types/portfolio-engine";
+import { coercePortfolioPlan } from "@/lib/portfolio-engine/entitlements";
 import { createPortfolioSlug, slugify } from "@/lib/portfolio-engine/slug";
 import {
   PORTFOLIO_DOMAIN_TARGET,
@@ -133,6 +136,29 @@ function sanitizeExperience(experience: PortfolioExperience): PortfolioExperienc
   };
 }
 
+function sanitizeEducation(education: PortfolioEducation): PortfolioEducation {
+  return {
+    id: sanitizeText(education.id, 80) || crypto.randomUUID(),
+    school: sanitizeText(education.school, 140),
+    credential: sanitizeText(education.credential, 140),
+    field: sanitizeText(education.field, 140),
+    start: sanitizeText(education.start, 40),
+    end: sanitizeText(education.end, 40),
+    summary: sanitizeMultilineText(education.summary, 800),
+  };
+}
+
+function sanitizeCertification(certification: PortfolioCertification): PortfolioCertification {
+  return {
+    id: sanitizeText(certification.id, 80) || crypto.randomUUID(),
+    name: sanitizeText(certification.name, 160),
+    issuer: sanitizeText(certification.issuer, 140),
+    issuedAt: sanitizeText(certification.issuedAt, 40),
+    expiresAt: sanitizeText(certification.expiresAt, 40),
+    url: sanitizeUrl(certification.url),
+  };
+}
+
 function sanitizeProject(project: PortfolioProject): PortfolioProject {
   return {
     id: sanitizeText(project.id, 80) || crypto.randomUUID(),
@@ -211,11 +237,27 @@ function sanitizeAnalyticsSummary(summary?: PortfolioAnalyticsSummary): Portfoli
     visitors: Number.isFinite(summary.visitors) ? Math.max(0, Math.round(summary.visitors)) : 0,
     clicks: Number.isFinite(summary.clicks) ? Math.max(0, Math.round(summary.clicks)) : 0,
     leads: Number.isFinite(summary.leads) ? Math.max(0, Math.round(summary.leads)) : 0,
+    projectViews: Number.isFinite(summary.projectViews)
+      ? Math.max(0, Math.round(summary.projectViews))
+      : 0,
+    cvDownloads: Number.isFinite(summary.cvDownloads)
+      ? Math.max(0, Math.round(summary.cvDownloads))
+      : 0,
+    contactClicks: Number.isFinite(summary.contactClicks)
+      ? Math.max(0, Math.round(summary.contactClicks))
+      : 0,
+    linkedinClicks: Number.isFinite(summary.linkedinClicks)
+      ? Math.max(0, Math.round(summary.linkedinClicks))
+      : 0,
+    githubClicks: Number.isFinite(summary.githubClicks)
+      ? Math.max(0, Math.round(summary.githubClicks))
+      : 0,
     avgReadSeconds: Number.isFinite(summary.avgReadSeconds)
       ? Math.max(0, Math.round(summary.avgReadSeconds))
       : 0,
     topReferrers: (summary.topReferrers ?? []).map(sanitizeAnalyticsDatum).slice(0, 8),
     topSections: (summary.topSections ?? []).map(sanitizeAnalyticsDatum).slice(0, 8),
+    topProjects: (summary.topProjects ?? []).map(sanitizeAnalyticsDatum).slice(0, 8),
     trend: (summary.trend ?? [])
       .map((item) => ({
         date: sanitizeText(item.date, 20),
@@ -282,7 +324,7 @@ export function sanitizeDraft(draft: PortfolioDraft): PortfolioDraft {
   return {
     ...normalized,
     portfolioVersion: 2,
-    plan: normalized.plan === "pro" ? "pro" : "free",
+    plan: coercePortfolioPlan(normalized.plan),
     slug: slugify(normalized.slug) || createPortfolioSlug(name, title),
     basics: {
       name,
@@ -303,6 +345,8 @@ export function sanitizeDraft(draft: PortfolioDraft): PortfolioDraft {
       .filter(Boolean)
       .slice(0, 24),
     experience: normalized.experience.map(sanitizeExperience).slice(0, 12),
+    education: normalized.education.map(sanitizeEducation).slice(0, 12),
+    certifications: normalized.certifications.map(sanitizeCertification).slice(0, 12),
     projects: normalized.projects.map(sanitizeProject).slice(0, 12),
     imports: normalized.imports.map(sanitizeImportRecord).slice(0, 20),
     customDomain: sanitizeCustomDomain(normalized.customDomain),

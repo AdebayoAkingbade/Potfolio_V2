@@ -32,6 +32,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  getPortfolioPlanLabel,
+  hasPortfolioFeature,
+  isTemplateAvailableForPlan,
+  portfolioFeatureLabels,
+  type PortfolioFeature,
+} from "@/lib/portfolio-engine/entitlements";
 import { professionConfigs, getProfessionConfig } from "@/lib/portfolio-engine/professions";
 import { createPublishedSnapshot } from "@/lib/portfolio-engine/publish";
 import { calculatePortfolioScore } from "@/lib/portfolio-engine/scoring";
@@ -41,7 +48,9 @@ import {
   MAX_IMAGE_SIZE_BYTES,
   MAX_VIDEO_SIZE_BYTES,
   createPortfolioDomain,
+  createCertification,
   createDraft,
+  createEducation,
   createExperience,
   createProject,
   createSocialLink,
@@ -51,7 +60,6 @@ import {
   withPortfolioV2Defaults,
 } from "@/lib/portfolio-engine/schema";
 import { clonePortfolioDraft, renderPortfolioExportHtml } from "@/lib/portfolio-engine/export";
-import { importResumeTextIntoDraft } from "@/lib/portfolio-engine/importers";
 import { sanitizeDraft } from "@/lib/portfolio-engine/sanitize";
 import {
   listPublishedSlugs,
@@ -69,6 +77,8 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   PortfolioDraft,
+  PortfolioCertification,
+  PortfolioEducation,
   PortfolioExperience,
   PortfolioProject,
   PortfolioTemplateId,
@@ -82,7 +92,7 @@ const steps = [
   "Imports",
   "Basics",
   "Skills",
-  "Experience",
+  "Career",
   "Projects",
   "Template",
   "Growth",
@@ -90,7 +100,37 @@ const steps = [
   "Publish",
 ];
 
+const RESUME_ACCEPT = [
+  ".txt",
+  ".md",
+  ".pdf",
+  ".docx",
+  "text/plain",
+  "text/markdown",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+].join(",");
+const MAX_RESUME_UPLOAD_BYTES = 5_000_000;
+const launchFeatures: PortfolioFeature[] = [
+  "customDomains",
+  "premiumTemplates",
+  "advancedAi",
+  "analytics",
+  "resumeGeneration",
+  "removeBranding",
+  "multiplePortfolios",
+  "cvImport",
+  "githubImport",
+];
+
 type PersistenceMode = "local" | "server";
+
+type PendingImport = {
+  source: "resume" | "github";
+  label: string;
+  detail: string;
+  draft: PortfolioDraft;
+};
 
 type PortfolioCreateWizardProps = {
   initialDraft?: PortfolioDraft;
@@ -147,6 +187,101 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function ImportReview({
+  pendingImport,
+  onApply,
+  onDiscard,
+}: {
+  pendingImport: PendingImport;
+  onApply: () => void;
+  onDiscard: () => void;
+}) {
+  const imported = pendingImport.draft;
+  const importedProjects = imported.projects.filter((project) => project.title || project.summary);
+  const importedExperience = imported.experience.filter(
+    (experience) => experience.role || experience.organization || experience.summary,
+  );
+
+  return (
+    <article className="rounded-lg border border-primary/50 bg-primary/10 p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex flex-wrap gap-2">
+            <Badge>{pendingImport.source === "resume" ? "CV review" : "GitHub review"}</Badge>
+            <Badge variant="outline">{pendingImport.label}</Badge>
+          </div>
+          <h3 className="mt-4 font-display text-2xl font-semibold">
+            Review extracted information
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            {pendingImport.detail}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onDiscard}>
+            Discard
+          </Button>
+          <Button type="button" onClick={onApply}>
+            <CheckCircle2 className="h-4 w-4" />
+            Apply to draft
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
+        <div className="rounded-md border border-border bg-card p-4">
+          <p className="font-medium">{imported.basics.name || "No name found"}</p>
+          <p className="mt-1 text-sm text-primary">
+            {imported.basics.title || "No title found"}
+          </p>
+          <p className="mt-3 line-clamp-4 text-sm leading-6 text-muted-foreground">
+            {imported.basics.summary || "No summary found."}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-muted-foreground">Skills</p>
+            <p className="mt-1 font-display text-2xl font-semibold">{imported.skills.length}</p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-muted-foreground">Experience</p>
+            <p className="mt-1 font-display text-2xl font-semibold">
+              {importedExperience.length}
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-muted-foreground">Education</p>
+            <p className="mt-1 font-display text-2xl font-semibold">
+              {imported.education.length}
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-muted-foreground">Projects</p>
+            <p className="mt-1 font-display text-2xl font-semibold">
+              {importedProjects.length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {importedExperience.slice(0, 3).map((experience) => (
+          <div key={experience.id} className="rounded-md border border-border bg-card p-3 text-sm">
+            <p className="font-medium">{experience.role || "Experience"}</p>
+            <p className="mt-1 text-muted-foreground">{experience.organization}</p>
+          </div>
+        ))}
+        {importedProjects.slice(0, 3).map((project) => (
+          <div key={project.id} className="rounded-md border border-border bg-card p-3 text-sm">
+            <p className="font-medium">{project.title || "Project"}</p>
+            <p className="mt-1 line-clamp-2 text-muted-foreground">{project.summary}</p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 export function PortfolioCreateWizard({
   initialDraft,
   persistenceMode = "local",
@@ -163,6 +298,8 @@ export function PortfolioCreateWizard({
   const [errors, setErrors] = React.useState<string[]>([]);
   const [skillInput, setSkillInput] = React.useState("");
   const [resumeText, setResumeText] = React.useState("");
+  const [resumeFile, setResumeFile] = React.useState<File | null>(null);
+  const [pendingImport, setPendingImport] = React.useState<PendingImport | null>(null);
   const [githubUsername, setGithubUsername] = React.useState("");
   const [domainInput, setDomainInput] = React.useState(initialDraft?.customDomain?.hostname ?? "");
   const [inviteEmail, setInviteEmail] = React.useState("");
@@ -308,6 +445,30 @@ export function PortfolioCreateWizard({
       ...current,
       experience: current.experience.map((item) =>
         item.id === experienceId ? updater(item) : item,
+      ),
+    }));
+  };
+
+  const updateEducation = (
+    educationId: string,
+    updater: (education: PortfolioEducation) => PortfolioEducation,
+  ) => {
+    updateDraft((current) => ({
+      ...current,
+      education: current.education.map((item) =>
+        item.id === educationId ? updater(item) : item,
+      ),
+    }));
+  };
+
+  const updateCertification = (
+    certificationId: string,
+    updater: (certification: PortfolioCertification) => PortfolioCertification,
+  ) => {
+    updateDraft((current) => ({
+      ...current,
+      certifications: current.certifications.map((item) =>
+        item.id === certificationId ? updater(item) : item,
       ),
     }));
   };
@@ -511,24 +672,27 @@ export function PortfolioCreateWizard({
   };
 
   const importResume = async () => {
-    if (!resumeText.trim()) {
-      setErrors(["Paste resume text or upload a text resume."]);
+    if (!resumeText.trim() && !resumeFile) {
+      setErrors(["Paste resume text or upload a TXT, Markdown, PDF, or DOCX resume."]);
       return;
     }
 
-    if (!isServerMode) {
-      updateDraft(() => importResumeTextIntoDraft(resumeText, draft));
-      setActionState("Resume imported");
-      setStep(2);
-      return;
-    }
-
-    setActionState("Importing resume");
-    const response = await fetch("/api/portfolio-engine/import/resume", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ draft, text: resumeText }),
-    }).catch(() => null);
+    setActionState(resumeFile ? "Extracting resume file" : "Extracting resume text");
+    const response = resumeFile
+      ? await (() => {
+          const formData = new FormData();
+          formData.append("file", resumeFile);
+          formData.append("draft", JSON.stringify(draft));
+          return fetch("/api/portfolio-engine/import/resume", {
+            method: "POST",
+            body: formData,
+          });
+        })().catch(() => null)
+      : await fetch("/api/portfolio-engine/import/resume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ draft, text: resumeText }),
+        }).catch(() => null);
 
     if (!response?.ok) {
       setActionState("");
@@ -538,21 +702,34 @@ export function PortfolioCreateWizard({
 
     const data = (await response.json()) as { draft?: PortfolioDraft };
     if (data.draft) {
-      setDraft(withPortfolioV2Defaults(data.draft, userEmail));
-      setActionState("Resume imported");
-      setStep(2);
+      const nextDraft = withPortfolioV2Defaults(data.draft, userEmail);
+      setPendingImport({
+        source: "resume",
+        label: resumeFile?.name ?? "Pasted resume",
+        detail: nextDraft.imports[0]?.detail ?? "Resume extracted. Review before applying.",
+        draft: nextDraft,
+      });
+      setActionState("Resume extracted");
     }
   };
 
   const importResumeFile = async (file?: File) => {
     if (!file) return;
-    if (file.size > 120_000) {
-      setErrors(["Resume import is limited to 120 KB for text uploads."]);
+    if (file.size > MAX_RESUME_UPLOAD_BYTES) {
+      setErrors(["Resume uploads are limited to 5 MB."]);
       return;
     }
 
-    setResumeText(await file.text());
-    setActionState("Resume text loaded");
+    setResumeFile(file);
+    setPendingImport(null);
+    if (file.type.startsWith("text/") || /\.(txt|md)$/i.test(file.name)) {
+      setResumeText(await file.text());
+      setActionState("Resume text loaded");
+      return;
+    }
+
+    setResumeText("");
+    setActionState("Resume file ready");
   };
 
   const importGithub = async () => {
@@ -576,10 +753,31 @@ export function PortfolioCreateWizard({
 
     const data = (await response.json()) as { draft?: PortfolioDraft };
     if (data.draft) {
-      setDraft(withPortfolioV2Defaults(data.draft, userEmail));
-      setActionState("GitHub imported");
-      setStep(5);
+      const nextDraft = withPortfolioV2Defaults(data.draft, userEmail);
+      setPendingImport({
+        source: "github",
+        label: githubUsername.trim(),
+        detail: nextDraft.imports[0]?.detail ?? "GitHub data extracted. Review before applying.",
+        draft: nextDraft,
+      });
+      setActionState("GitHub extracted");
     }
+  };
+
+  const applyPendingImport = () => {
+    if (!pendingImport) return;
+    setDraft(withPortfolioV2Defaults(pendingImport.draft, userEmail));
+    setPendingImport(null);
+    setResumeFile(null);
+    setActionState(
+      pendingImport.source === "resume" ? "Resume applied to draft" : "GitHub applied to draft",
+    );
+    setStep(pendingImport.source === "resume" ? 2 : 5);
+  };
+
+  const discardPendingImport = () => {
+    setPendingImport(null);
+    setActionState("Import discarded");
   };
 
   const connectDomain = async () => {
@@ -870,11 +1068,16 @@ export function PortfolioCreateWizard({
                   <UploadCloud className="h-4 w-4 text-primary" />
                   <input
                     type="file"
-                    accept=".txt,.md,.text"
+                    accept={RESUME_ACCEPT}
                     onChange={(event) => importResumeFile(event.target.files?.[0])}
                     className="w-full text-sm"
                   />
                 </span>
+                {resumeFile ? (
+                  <span className="mt-2 block text-xs text-muted-foreground">
+                    {resumeFile.name}
+                  </span>
+                ) : null}
               </label>
               <Field label="Resume text">
                 <Textarea
@@ -886,7 +1089,7 @@ export function PortfolioCreateWizard({
               </Field>
               <Button type="button" onClick={importResume} className="w-fit">
                 <FileText className="h-4 w-4" />
-                Import resume
+                Extract for review
               </Button>
             </div>
           </article>
@@ -931,6 +1134,15 @@ export function PortfolioCreateWizard({
               </div>
             </div>
           </article>
+          {pendingImport ? (
+            <div className="lg:col-span-2">
+              <ImportReview
+                pendingImport={pendingImport}
+                onApply={applyPendingImport}
+                onDiscard={discardPendingImport}
+              />
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -1242,6 +1454,234 @@ export function PortfolioCreateWizard({
             <Plus className="h-4 w-4" />
             Add experience
           </Button>
+
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <h3 className="font-display text-2xl font-semibold">Education</h3>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                updateDraft((current) => ({
+                  ...current,
+                  education: [...current.education, createEducation()],
+                }))
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Add education
+            </Button>
+          </div>
+          {draft.education.length ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {draft.education.map((education, index) => (
+                <article
+                  key={education.id}
+                  className="rounded-lg border border-border bg-card p-5"
+                >
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <h4 className="font-display text-xl font-semibold">
+                      Education {index + 1}
+                    </h4>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={() =>
+                        updateDraft((current) => ({
+                          ...current,
+                          education: current.education.filter((item) => item.id !== education.id),
+                        }))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid gap-4">
+                    <Field label="School">
+                      <Input
+                        value={education.school}
+                        onChange={(event) =>
+                          updateEducation(education.id, (item) => ({
+                            ...item,
+                            school: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Credential">
+                      <Input
+                        value={education.credential}
+                        onChange={(event) =>
+                          updateEducation(education.id, (item) => ({
+                            ...item,
+                            credential: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Field">
+                      <Input
+                        value={education.field}
+                        onChange={(event) =>
+                          updateEducation(education.id, (item) => ({
+                            ...item,
+                            field: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Start">
+                        <Input
+                          value={education.start}
+                          onChange={(event) =>
+                            updateEducation(education.id, (item) => ({
+                              ...item,
+                              start: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="End">
+                        <Input
+                          value={education.end}
+                          onChange={(event) =>
+                            updateEducation(education.id, (item) => ({
+                              ...item,
+                              end: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Summary">
+                      <Textarea
+                        value={education.summary}
+                        onChange={(event) =>
+                          updateEducation(education.id, (item) => ({
+                            ...item,
+                            summary: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No education added yet.</p>
+          )}
+
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <h3 className="font-display text-2xl font-semibold">Certifications</h3>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                updateDraft((current) => ({
+                  ...current,
+                  certifications: [...current.certifications, createCertification()],
+                }))
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Add certification
+            </Button>
+          </div>
+          {draft.certifications.length ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {draft.certifications.map((certification, index) => (
+                <article
+                  key={certification.id}
+                  className="rounded-lg border border-border bg-card p-5"
+                >
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <h4 className="font-display text-xl font-semibold">
+                      Certification {index + 1}
+                    </h4>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={() =>
+                        updateDraft((current) => ({
+                          ...current,
+                          certifications: current.certifications.filter(
+                            (item) => item.id !== certification.id,
+                          ),
+                        }))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid gap-4">
+                    <Field label="Name">
+                      <Input
+                        value={certification.name}
+                        onChange={(event) =>
+                          updateCertification(certification.id, (item) => ({
+                            ...item,
+                            name: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Issuer">
+                      <Input
+                        value={certification.issuer}
+                        onChange={(event) =>
+                          updateCertification(certification.id, (item) => ({
+                            ...item,
+                            issuer: event.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Issued">
+                        <Input
+                          value={certification.issuedAt}
+                          onChange={(event) =>
+                            updateCertification(certification.id, (item) => ({
+                              ...item,
+                              issuedAt: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Expires">
+                        <Input
+                          value={certification.expiresAt}
+                          onChange={(event) =>
+                            updateCertification(certification.id, (item) => ({
+                              ...item,
+                              expiresAt: event.target.value,
+                            }))
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Credential URL">
+                      <Input
+                        value={certification.url}
+                        onChange={(event) =>
+                          updateCertification(certification.id, (item) => ({
+                            ...item,
+                            url: event.target.value,
+                          }))
+                        }
+                        placeholder="https://..."
+                      />
+                    </Field>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No certifications added yet.</p>
+          )}
         </div>
       );
     }
@@ -1461,6 +1901,7 @@ export function PortfolioCreateWizard({
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {portfolioTemplates.map((template) => {
             const active = draft.templateId === template.id;
+            const available = isTemplateAvailableForPlan(template, draft.plan);
             return (
               <button
                 key={template.id}
@@ -1468,14 +1909,15 @@ export function PortfolioCreateWizard({
                 onClick={() =>
                   updateDraft((current) => ({
                     ...current,
-                    plan: template.tier === "pro" ? "pro" : current.plan,
-                    templateId: template.id as PortfolioTemplateId,
+                    templateId: available ? (template.id as PortfolioTemplateId) : current.templateId,
                   }))
                 }
                 aria-pressed={active}
+                disabled={!available}
                 className={cn(
                   "rounded-lg border border-border bg-card p-5 text-left transition hover:border-primary",
                   active && template.previewClass,
+                  !available && "cursor-not-allowed opacity-60",
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -1483,10 +1925,8 @@ export function PortfolioCreateWizard({
                     <p className="font-display text-2xl font-semibold">{template.name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{template.creatorName}</p>
                   </div>
-                  <Badge variant={template.tier === "pro" ? "secondary" : "outline"}>
-                    {template.tier === "pro"
-                      ? `$${template.priceUsd ?? 0}`
-                      : "Free"}
+                  <Badge variant={template.category === "marketplace" ? "secondary" : "outline"}>
+                    {template.category === "marketplace" ? "Premium" : "Core"}
                   </Badge>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -1520,30 +1960,24 @@ export function PortfolioCreateWizard({
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <Crown className="h-5 w-5 text-primary" />
-                <h3 className="font-display text-2xl font-semibold">Pro plan</h3>
+                <h3 className="font-display text-2xl font-semibold">Pro-grade launch</h3>
               </div>
-              <Badge variant={draft.plan === "pro" ? "default" : "outline"}>
-                {draft.plan === "pro" ? "Pro" : "Free"}
-              </Badge>
+              <Badge>{getPortfolioPlanLabel(draft.plan)}</Badge>
             </div>
             <div className="mt-5 grid gap-3 text-sm text-muted-foreground">
-              {[
-                "OpenAI rewrite credits",
-                "Custom domains",
-                "Advanced analytics",
-                "Marketplace templates",
-                "Video uploads",
-                "Team seats",
-              ].map((item) => (
-                <p key={item} className="flex items-center gap-2">
+              {launchFeatures.map((feature) => (
+                <p key={feature} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
-                  {item}
+                  {portfolioFeatureLabels[feature]}
+                  {!hasPortfolioFeature(draft, feature) ? (
+                    <span className="text-xs text-secondary">Requires Pro</span>
+                  ) : null}
                 </p>
               ))}
             </div>
             <Button type="button" className="mt-5" onClick={startCheckout}>
               <Rocket className="h-4 w-4" />
-              Upgrade to Pro
+              Open billing or keep Pro enabled
             </Button>
           </article>
 
@@ -1793,9 +2227,7 @@ export function PortfolioCreateWizard({
                   <Badge>{profession.label}</Badge>
                   <Badge variant="secondary">{steps[step]}</Badge>
                   <Badge variant="outline">{isServerMode ? "Server" : "Local"}</Badge>
-                  <Badge variant={draft.plan === "pro" ? "secondary" : "outline"}>
-                    {draft.plan === "pro" ? "Pro" : "Free"}
-                  </Badge>
+                  <Badge variant="secondary">{getPortfolioPlanLabel(draft.plan)}</Badge>
                   <Badge variant="outline">Score {score.score}</Badge>
                 </div>
                 <h2 className="mt-4 font-display text-3xl font-semibold">{profession.label}</h2>

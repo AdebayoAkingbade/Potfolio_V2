@@ -71,9 +71,15 @@ export type PortfolioAnalyticsSummary = {
   visitors: number;
   clicks: number;
   leads: number;
+  projectViews: number;
+  cvDownloads: number;
+  contactClicks: number;
+  linkedinClicks: number;
+  githubClicks: number;
   avgReadSeconds: number;
   topReferrers: PortfolioAnalyticsDatum[];
   topSections: PortfolioAnalyticsDatum[];
+  topProjects: PortfolioAnalyticsDatum[];
   trend: PortfolioAnalyticsTrend[];
 };
 
@@ -150,6 +156,25 @@ export type PortfolioExperience = {
   highlights: string[];
 };
 
+export type PortfolioEducation = {
+  id: string;
+  school: string;
+  credential: string;
+  field: string;
+  start: string;
+  end: string;
+  summary: string;
+};
+
+export type PortfolioCertification = {
+  id: string;
+  name: string;
+  issuer: string;
+  issuedAt: string;
+  expiresAt: string;
+  url: string;
+};
+
 export type PortfolioProject = {
   id: string;
   title: string;
@@ -171,6 +196,8 @@ export type PortfolioDraft = {
   basics: PortfolioBasics;
   skills: string[];
   experience: PortfolioExperience[];
+  education: PortfolioEducation[];
+  certifications: PortfolioCertification[];
   projects: PortfolioProject[];
   imports: PortfolioImportRecord[];
   customDomain?: PortfolioCustomDomain;

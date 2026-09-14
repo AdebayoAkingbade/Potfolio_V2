@@ -1,5 +1,9 @@
 import type { PortfolioDraft } from "@/types/portfolio-engine";
-import { createImportRecord, withPortfolioV2Defaults } from "@/lib/portfolio-engine/schema";
+import {
+  createAnalyticsSummary,
+  createImportRecord,
+  withPortfolioV2Defaults,
+} from "@/lib/portfolio-engine/schema";
 import { sanitizeDraft } from "@/lib/portfolio-engine/sanitize";
 
 function escapeHtml(value: string) {
@@ -24,16 +28,7 @@ export function clonePortfolioDraft(draft: PortfolioDraft): PortfolioDraft {
       createImportRecord("clone", source.basics.name || "Portfolio", "Cloned from an existing draft."),
       ...source.imports,
     ].slice(0, 20),
-    analytics: {
-      views: 0,
-      visitors: 0,
-      clicks: 0,
-      leads: 0,
-      avgReadSeconds: 0,
-      topReferrers: [],
-      topSections: [],
-      trend: [],
-    },
+    analytics: createAnalyticsSummary(),
     team: {
       ...source.team,
       id: `${crypto.randomUUID()}-team`,
@@ -62,6 +57,23 @@ export function renderPortfolioExportHtml(draft: PortfolioDraft) {
         <h3>${escapeHtml(item.role || "Role")}</h3>
         <p>${escapeHtml(item.organization || "")}</p>
         <p>${escapeHtml(item.summary || "")}</p>
+      </article>`,
+    )
+    .join("");
+  const education = portfolio.education
+    .map(
+      (item) => `<article>
+        <h3>${escapeHtml(item.credential || item.field || "Education")}</h3>
+        <p>${escapeHtml(item.school || "")}</p>
+        <p>${escapeHtml(item.summary || "")}</p>
+      </article>`,
+    )
+    .join("");
+  const certifications = portfolio.certifications
+    .map(
+      (item) => `<article>
+        <h3>${escapeHtml(item.name || "Certification")}</h3>
+        <p>${escapeHtml(item.issuer || "")}</p>
       </article>`,
     )
     .join("");
@@ -103,6 +115,8 @@ export function renderPortfolioExportHtml(draft: PortfolioDraft) {
       </header>
       <section><h2>Skills</h2><ul>${skills}</ul></section>
       <section><h2>Experience</h2>${experience}</section>
+      <section><h2>Education</h2>${education}</section>
+      <section><h2>Certifications</h2>${certifications}</section>
       <section><h2>Selected Work</h2>${projects}</section>
     </main>
   </body>

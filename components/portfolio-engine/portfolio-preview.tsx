@@ -1,7 +1,9 @@
 import {
   ArrowUpRight,
+  Award,
   BriefcaseBusiness,
   CheckCircle2,
+  GraduationCap,
   Globe2,
   Mail,
   MapPin,
@@ -13,6 +15,7 @@ import {
 import Image from "next/image";
 
 import type { PortfolioDraft, PublishedPortfolio } from "@/types/portfolio-engine";
+import { hasPortfolioFeature } from "@/lib/portfolio-engine/entitlements";
 import { calculatePortfolioScore } from "@/lib/portfolio-engine/scoring";
 import { getProfessionConfig } from "@/lib/portfolio-engine/professions";
 import { getTemplateById } from "@/lib/portfolio-engine/templates";
@@ -23,6 +26,15 @@ type PreviewPortfolio = PortfolioDraft | PublishedPortfolio;
 
 function hasValue(value: string) {
   return value.trim().length > 0;
+}
+
+function linkEventType(label: string, url: string) {
+  const searchable = `${label} ${url}`.toLowerCase();
+  if (url.startsWith("mailto:") || url.startsWith("tel:")) return "contact_click";
+  if (searchable.includes("linkedin")) return "linkedin_click";
+  if (searchable.includes("github")) return "github_click";
+  if (searchable.includes("resume") || searchable.includes("cv")) return "cv_download";
+  return "click";
 }
 
 export function PortfolioPreview({
@@ -38,6 +50,7 @@ export function PortfolioPreview({
   const basics = portfolio.basics;
   const contactHref = basics.email ? `mailto:${basics.email}` : basics.socialLinks[0]?.url;
   const profilePhotoSrc = basics.profilePhoto?.url ?? basics.profilePhoto?.dataUrl;
+  const visibleSocialLinks = basics.socialLinks.filter((link) => link.url).slice(0, 6);
 
   return (
     <article className="overflow-hidden rounded-lg border border-border bg-card">
@@ -49,8 +62,7 @@ export function PortfolioPreview({
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{profession.label}</Badge>
               <Badge variant="secondary">{template.name}</Badge>
-              {template.category === "marketplace" ? <Badge variant="outline">Marketplace</Badge> : null}
-              {portfolio.plan === "pro" ? <Badge variant="outline">Pro</Badge> : null}
+              {template.category === "marketplace" ? <Badge variant="outline">Premium</Badge> : null}
               <Badge variant="outline">{score.score}/100</Badge>
             </div>
             <h1 className="mt-6 text-balance font-display text-4xl font-semibold md:text-6xl">
@@ -72,6 +84,8 @@ export function PortfolioPreview({
                 <a
                   className="inline-flex items-center gap-2 hover:text-foreground"
                   href={`mailto:${basics.email}`}
+                  data-portfolio-event="contact_click"
+                  data-portfolio-section="Email"
                 >
                   <Mail className="h-4 w-4 text-primary" />
                   {basics.email}
@@ -81,6 +95,8 @@ export function PortfolioPreview({
                 <a
                   className="inline-flex items-center gap-2 hover:text-foreground"
                   href={`tel:${basics.phone}`}
+                  data-portfolio-event="contact_click"
+                  data-portfolio-section="Phone"
                 >
                   <Phone className="h-4 w-4 text-primary" />
                   {basics.phone}
@@ -93,6 +109,24 @@ export function PortfolioPreview({
                 </span>
               ) : null}
             </div>
+            {visibleSocialLinks.length ? (
+              <nav className="mt-5 flex flex-wrap gap-3" aria-label="Profile links">
+                {visibleSocialLinks.map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    data-portfolio-event={linkEventType(link.label, link.url)}
+                    data-portfolio-section={link.label || "Profile link"}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-foreground"
+                  >
+                    {link.label || "Profile"}
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </a>
+                ))}
+              </nav>
+            ) : null}
           </div>
 
           {profilePhotoSrc ? (
@@ -171,6 +205,8 @@ export function PortfolioPreview({
             <a
               className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary"
               href={contactHref}
+              data-portfolio-event={linkEventType("Contact", contactHref)}
+              data-portfolio-section="Contact"
             >
               Contact
               <ArrowUpRight className="h-4 w-4" />
@@ -185,6 +221,75 @@ export function PortfolioPreview({
         </div>
       </section>
 
+      {portfolio.education.length || portfolio.certifications.length ? (
+        <section
+          className={cn(
+            "grid border-t border-border",
+            compact ? "md:grid-cols-2" : "lg:grid-cols-2",
+          )}
+        >
+          {portfolio.education.length ? (
+            <div className="border-b border-border p-5 lg:border-b-0 lg:border-r">
+              <div className="mb-4 flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold">Education</h2>
+              </div>
+              <div className="space-y-4">
+                {portfolio.education.slice(0, compact ? 2 : 4).map((item) => (
+                  <div key={item.id}>
+                    <p className="font-medium">
+                      {item.credential || item.field || "Education"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.school || "School"}
+                      {item.start || item.end ? `, ${item.start} - ${item.end || "Present"}` : ""}
+                    </p>
+                    {item.summary ? (
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        {item.summary}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {portfolio.certifications.length ? (
+            <div className="p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Award className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold">Certifications</h2>
+              </div>
+              <div className="space-y-4">
+                {portfolio.certifications.slice(0, compact ? 2 : 5).map((item) => (
+                  <div key={item.id}>
+                    <p className="font-medium">{item.name || "Certification"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.issuer || "Issuer"}
+                      {item.issuedAt ? `, ${item.issuedAt}` : ""}
+                    </p>
+                    {item.url ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        data-portfolio-event="click"
+                        data-portfolio-section={item.name || "Certification"}
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary"
+                      >
+                        Credential
+                        <ArrowUpRight className="h-3 w-3" />
+                      </a>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="border-t border-border p-5 md:p-6">
         <div className="mb-5 flex items-center gap-2">
           <Globe2 className="h-4 w-4 text-primary" />
@@ -194,6 +299,7 @@ export function PortfolioPreview({
           {portfolio.projects.slice(0, compact ? 2 : 6).map((project) => (
             <article
               key={project.id}
+              data-portfolio-project={project.title || "Project"}
               className="rounded-md border border-border bg-background/60 p-4"
             >
               <p className="font-semibold">{project.title || "Project title"}</p>
@@ -235,6 +341,8 @@ export function PortfolioPreview({
                     href={link.url}
                     target="_blank"
                     rel="noreferrer"
+                    data-portfolio-event={linkEventType(link.label, link.url)}
+                    data-portfolio-section={project.title || link.label || "Project"}
                     className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     {link.label || "Link"}
@@ -246,6 +354,11 @@ export function PortfolioPreview({
           ))}
         </div>
       </section>
+      {!hasPortfolioFeature(portfolio, "removeBranding") ? (
+        <footer className="border-t border-border p-5 text-sm text-muted-foreground">
+          Made with Portfolio Engine
+        </footer>
+      ) : null}
     </article>
   );
 }

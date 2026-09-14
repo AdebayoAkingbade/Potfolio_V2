@@ -1,5 +1,7 @@
 import type { PortfolioDraft } from "@/types/portfolio-engine";
 import {
+  createCertification,
+  createEducation,
   createExperience,
   createImportRecord,
   createProject,
@@ -38,20 +40,25 @@ const sectionHeadings = [
   "technical skills",
   "experience",
   "work experience",
+  "professional experience",
   "employment",
   "projects",
   "selected projects",
   "education",
+  "education and training",
+  "certification",
   "certifications",
+  "certifications and licenses",
+  "licenses",
   "awards",
 ];
 
+function rawLinesFromText(text: string) {
+  return text.replace(/\r/g, "").split("\n").map((line) => line.trim());
+}
+
 function linesFromText(text: string) {
-  return text
-    .replace(/\r/g, "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  return rawLinesFromText(text).filter(Boolean);
 }
 
 function normalizeHeading(value: string) {
@@ -74,6 +81,53 @@ function collectSection(lines: string[], names: string[]) {
   }
 
   return collected.join("\n");
+}
+
+function collectSectionFromText(text: string, names: string[]) {
+  return collectSection(rawLinesFromText(text), names);
+}
+
+function splitSectionBlocks(value: string) {
+  const rawLines = rawLinesFromText(value);
+  const blocks: string[][] = [];
+  let current: string[] = [];
+
+  for (const line of rawLines) {
+    if (!line) {
+      if (current.length) {
+        blocks.push(current);
+        current = [];
+      }
+      continue;
+    }
+
+    current.push(line);
+  }
+
+  if (current.length) blocks.push(current);
+  if (blocks.length > 1) return blocks.map((block) => block.join("\n"));
+
+  const lines = rawLines.filter(Boolean);
+  if (!lines.length) return [];
+
+  const grouped: string[][] = [];
+  for (const line of lines) {
+    const startsNewBlock =
+      grouped.length > 0 &&
+      !/^[-*•]/.test(line) &&
+      (/(\d{4}|present|current)/i.test(line) || line.length <= 90);
+
+    if (startsNewBlock) {
+      grouped.push([line]);
+      continue;
+    }
+
+    const group = grouped[grouped.length - 1];
+    if (group) group.push(line);
+    else grouped.push([line]);
+  }
+
+  return grouped.map((block) => block.join("\n"));
 }
 
 function splitCandidates(value: string) {
@@ -99,15 +153,27 @@ function firstUsefulLine(lines: string[]) {
   );
 }
 
-function replaceEmptyDefaults<
-  T extends { id: string; summary?: string; title?: string; role?: string },
->(
-  existing: T[],
-  imported: T[],
-) {
+function detectTitle(lines: string[], name: string) {
+  return (
+    lines
+      .slice(0, 8)
+      .find(
+        (line) =>
+          line !== name &&
+          line.length <= 100 &&
+          !line.includes("@") &&
+          !/(\+?\d[\d\s().-]{7,}\d)|^https?:\/\//i.test(line) &&
+          !isSectionHeading(line),
+      ) ?? ""
+  );
+}
+
+function replaceEmptyDefaults<T extends { id: string }>(existing: T[], imported: T[]) {
   if (!imported.length) return existing;
-  const hasUsefulExisting = existing.some(
-    (item) => item.summary || item.title || item.role,
+  const hasUsefulExisting = existing.some((item) =>
+    Object.entries(item).some(
+      ([key, value]) => key !== "id" && typeof value === "string" && value.trim(),
+    ),
   );
   return hasUsefulExisting ? uniqueById([...imported, ...existing]) : imported;
 }
@@ -131,19 +197,33 @@ export function importResumeTextIntoDraft(text: string, draft: PortfolioDraft): 
     sanitizeUrl(match[0]),
   );
   const summary =
-    collectSection(lines, ["summary", "profile", "objective"]) ||
+    collectSectionFromText(safeText, ["summary", "profile", "objective"]) ||
     lines.slice(1, 5).join(" ");
-  const skills = splitCandidates(collectSection(lines, ["skills", "technical skills"]));
-  const experienceBlocks = collectSection(lines, ["experience", "work experience", "employment"])
-    .split(/\n{2,}/g)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-  const projectBlocks = collectSection(lines, ["projects", "selected projects"])
-    .split(/\n{2,}/g)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .slice(0, 4);
+  const name = sanitizeText(firstUsefulLine(lines), 120);
+  const title = sanitizeText(detectTitle(lines, name), 120);
+  const skills = splitCandidates(collectSectionFromText(safeText, ["skills", "technical skills"]));
+  const experienceBlocks = splitSectionBlocks(
+    collectSectionFromText(safeText, [
+      "experience",
+      "work experience",
+      "professional experience",
+      "employment",
+    ]),
+  ).slice(0, 6);
+  const educationBlocks = splitSectionBlocks(
+    collectSectionFromText(safeText, ["education", "education and training"]),
+  ).slice(0, 6);
+  const certificationBlocks = splitSectionBlocks(
+    collectSectionFromText(safeText, [
+      "certifications",
+      "certification",
+      "certifications and licenses",
+      "licenses",
+    ]),
+  ).slice(0, 8);
+  const projectBlocks = splitSectionBlocks(
+    collectSectionFromText(safeText, ["projects", "selected projects"]),
+  ).slice(0, 6);
 
   const importedExperience = experienceBlocks.map((block) => {
     const blockLines = linesFromText(block);
@@ -153,6 +233,33 @@ export function importResumeTextIntoDraft(text: string, draft: PortfolioDraft): 
       organization: sanitizeText(blockLines[1] ?? "", 120),
       summary: sanitizeMultilineText(blockLines.slice(2).join(" ") || block, 900),
       highlights: splitCandidates(blockLines.slice(2).join("\n")).slice(0, 4),
+    };
+  });
+
+  const importedEducation = educationBlocks.map((block) => {
+    const blockLines = linesFromText(block);
+    return {
+      ...createEducation(),
+      school: sanitizeText(blockLines[0] ?? "", 140),
+      credential: sanitizeText(blockLines[1] ?? "", 140),
+      field: sanitizeText(blockLines[2] ?? "", 140),
+      summary: sanitizeMultilineText(blockLines.slice(3).join(" ") || block, 800),
+    };
+  });
+
+  const importedCertifications = certificationBlocks.map((block) => {
+    const blockLines = linesFromText(block);
+    const [namePart = "", issuerPart = ""] = (blockLines[0] ?? "").split(/\s[-|]\s/, 2);
+
+    return {
+      ...createCertification(),
+      name: sanitizeText(namePart || blockLines[0] || "", 160),
+      issuer: sanitizeText(issuerPart || blockLines[1] || "", 140),
+      issuedAt: sanitizeText(
+        blockLines.find((line) => /\b(19|20)\d{2}\b|issued|earned/i.test(line)) ?? "",
+        40,
+      ),
+      url: sanitizeUrl(blockLines.find((line) => /^https?:\/\//i.test(line)) ?? ""),
     };
   });
 
@@ -182,7 +289,8 @@ export function importResumeTextIntoDraft(text: string, draft: PortfolioDraft): 
     ...normalized,
     basics: {
       ...normalized.basics,
-      name: normalized.basics.name || sanitizeText(firstUsefulLine(lines), 120),
+      name: normalized.basics.name || name,
+      title: normalized.basics.title || title,
       summary: normalized.basics.summary || sanitizeMultilineText(summary, 1200),
       email: normalized.basics.email || email,
       phone: normalized.basics.phone || sanitizeText(phone, 40),
@@ -190,13 +298,24 @@ export function importResumeTextIntoDraft(text: string, draft: PortfolioDraft): 
     },
     skills: unique([...normalized.skills, ...skills]).slice(0, 24),
     experience: replaceEmptyDefaults(normalized.experience, importedExperience).slice(0, 12),
+    education: replaceEmptyDefaults(normalized.education, importedEducation).slice(0, 12),
+    certifications: replaceEmptyDefaults(
+      normalized.certifications,
+      importedCertifications,
+    ).slice(0, 12),
     projects: replaceEmptyDefaults(normalized.projects, importedProjects).slice(0, 12),
     imports: [
       createImportRecord(
         "resume",
         "Resume/CV import",
-        `Imported ${skills.length} skills, ${importedExperience.length} experience entries, and ${importedProjects.length} projects.`,
-        skills.length || importedExperience.length || importedProjects.length ? "imported" : "partial",
+        `Imported ${skills.length} skills, ${importedExperience.length} experience entries, ${importedEducation.length} education entries, ${importedCertifications.length} certifications, and ${importedProjects.length} projects.`,
+        skills.length ||
+          importedExperience.length ||
+          importedEducation.length ||
+          importedCertifications.length ||
+          importedProjects.length
+          ? "imported"
+          : "partial",
       ),
       ...normalized.imports,
     ].slice(0, 20),

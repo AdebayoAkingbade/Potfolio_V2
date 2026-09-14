@@ -32,11 +32,17 @@ export function summarizeAnalyticsEvents(
 
   const referrers = new Map<string, number>();
   const sections = new Map<string, number>();
+  const projects = new Map<string, number>();
   const visitors = new Set<string>();
   const trend = new Map<string, { views: number; visitors: Set<string> }>();
   let views = 0;
   let clicks = 0;
   let leads = 0;
+  let projectViews = 0;
+  let cvDownloads = 0;
+  let contactClicks = 0;
+  let linkedinClicks = 0;
+  let githubClicks = 0;
   let totalReadSeconds = 0;
   let readSamples = 0;
 
@@ -53,6 +59,17 @@ export function summarizeAnalyticsEvents(
       views += 1;
       dayTrend.views += 1;
     }
+    if (type === "project_view") {
+      projectViews += 1;
+      if (event.section) increment(projects, event.section);
+    }
+    if (type === "cv_download") cvDownloads += 1;
+    if (type === "contact_click") {
+      contactClicks += 1;
+      leads += 1;
+    }
+    if (type === "linkedin_click") linkedinClicks += 1;
+    if (type === "github_click") githubClicks += 1;
     if (type === "click") clicks += 1;
     if (type === "lead") leads += 1;
     if (event.referrer) increment(referrers, event.referrer);
@@ -68,11 +85,17 @@ export function summarizeAnalyticsEvents(
   return {
     views,
     visitors: visitors.size,
-    clicks,
+    clicks: clicks + contactClicks + linkedinClicks + githubClicks + cvDownloads,
     leads,
+    projectViews,
+    cvDownloads,
+    contactClicks,
+    linkedinClicks,
+    githubClicks,
     avgReadSeconds: readSamples ? Math.round(totalReadSeconds / readSamples) : 0,
     topReferrers: topValues(referrers),
     topSections: topValues(sections),
+    topProjects: topValues(projects),
     trend: Array.from(trend.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
       .slice(-30)
@@ -104,6 +127,11 @@ export function createDemoAnalyticsSummary(seed = 1): PortfolioAnalyticsSummary 
     visitors,
     clicks: Math.round(views * 0.18),
     leads: Math.round(views * 0.045),
+    projectViews: Math.round(views * 0.58),
+    cvDownloads: Math.round(views * 0.035),
+    contactClicks: Math.round(views * 0.05),
+    linkedinClicks: Math.round(views * 0.07),
+    githubClicks: Math.round(views * 0.06),
     avgReadSeconds: 86,
     topReferrers: [
       { label: "LinkedIn", value: Math.round(views * 0.34) },
@@ -114,6 +142,11 @@ export function createDemoAnalyticsSummary(seed = 1): PortfolioAnalyticsSummary 
       { label: "Selected Work", value: Math.round(views * 0.42) },
       { label: "Experience", value: Math.round(views * 0.25) },
       { label: "Contact", value: Math.round(views * 0.12) },
+    ],
+    topProjects: [
+      { label: "Data Visualization", value: Math.round(views * 0.27) },
+      { label: "Commerce Platform", value: Math.round(views * 0.18) },
+      { label: "AI Workflow", value: Math.round(views * 0.13) },
     ],
     trend,
   };

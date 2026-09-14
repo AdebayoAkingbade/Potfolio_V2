@@ -3,7 +3,9 @@ import type {
   PortfolioAnalyticsSummary,
   PortfolioCustomDomain,
   DraftValidationResult,
+  PortfolioCertification,
   PortfolioDraft,
+  PortfolioEducation,
   PortfolioExportSettings,
   PortfolioExperience,
   PortfolioImportRecord,
@@ -75,9 +77,15 @@ export function createAnalyticsSummary(): PortfolioAnalyticsSummary {
     visitors: 0,
     clicks: 0,
     leads: 0,
+    projectViews: 0,
+    cvDownloads: 0,
+    contactClicks: 0,
+    linkedinClicks: 0,
+    githubClicks: 0,
     avgReadSeconds: 0,
     topReferrers: [],
     topSections: [],
+    topProjects: [],
     trend: [],
   };
 }
@@ -127,6 +135,29 @@ export function createExperience(): PortfolioExperience {
   };
 }
 
+export function createEducation(): PortfolioEducation {
+  return {
+    id: crypto.randomUUID(),
+    school: "",
+    credential: "",
+    field: "",
+    start: "",
+    end: "",
+    summary: "",
+  };
+}
+
+export function createCertification(): PortfolioCertification {
+  return {
+    id: crypto.randomUUID(),
+    name: "",
+    issuer: "",
+    issuedAt: "",
+    expiresAt: "",
+    url: "",
+  };
+}
+
 export function createProject(): PortfolioProject {
   return {
     id: crypto.randomUUID(),
@@ -163,7 +194,7 @@ export function createDraft(
   return {
     id: draftId,
     portfolioVersion: 2,
-    plan: "free",
+    plan: "pro",
     profession,
     templateId,
     slug: "",
@@ -179,6 +210,8 @@ export function createDraft(
     },
     skills: professionConfig.suggestedSkills.slice(0, 6),
     experience: [createExperience()],
+    education: [],
+    certifications: [],
     projects: [createProject()],
     imports: [],
     analytics: createAnalyticsSummary(),
@@ -200,7 +233,9 @@ export function withPortfolioV2Defaults(
   return {
     ...draft,
     portfolioVersion: 2,
-    plan: draft.plan === "pro" ? "pro" : "free",
+    plan: "pro",
+    education: Array.isArray(draft.education) ? draft.education : [],
+    certifications: Array.isArray(draft.certifications) ? draft.certifications : [],
     projects: (Array.isArray(draft.projects) ? draft.projects : []).map((project) => ({
       ...project,
       videos: project.videos ?? [],

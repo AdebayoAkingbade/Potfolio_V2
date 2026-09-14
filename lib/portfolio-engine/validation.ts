@@ -3,8 +3,10 @@ import type {
   PortfolioAnalyticsSummary,
   ContactPreference,
   PortfolioAsset,
+  PortfolioCertification,
   PortfolioCustomDomain,
   PortfolioDraft,
+  PortfolioEducation,
   PortfolioExportSettings,
   PortfolioExperience,
   PortfolioImportRecord,
@@ -23,7 +25,9 @@ import { professionConfigs } from "@/lib/portfolio-engine/professions";
 import {
   PORTFOLIO_DOMAIN_TARGET,
   createAnalyticsSummary,
+  createCertification,
   createDraft,
+  createEducation,
   createExperience,
   createExportSettings,
   createProject,
@@ -70,7 +74,7 @@ function contactPreferenceValue(value: unknown): ContactPreference {
 }
 
 function planValue(value: unknown): PortfolioPlan {
-  return portfolioPlans.has(value as PortfolioPlan) ? (value as PortfolioPlan) : "free";
+  return portfolioPlans.has(value as PortfolioPlan) ? (value as PortfolioPlan) : "pro";
 }
 
 function numberValue(value: unknown) {
@@ -144,6 +148,33 @@ function experienceValue(value: unknown): PortfolioExperience {
     end: stringValue(value.end),
     summary: stringValue(value.summary),
     highlights: stringArray(value.highlights),
+  };
+}
+
+function educationValue(value: unknown): PortfolioEducation {
+  if (!isRecord(value)) return createEducation();
+
+  return {
+    id: idValue(value.id),
+    school: stringValue(value.school),
+    credential: stringValue(value.credential),
+    field: stringValue(value.field),
+    start: stringValue(value.start),
+    end: stringValue(value.end),
+    summary: stringValue(value.summary),
+  };
+}
+
+function certificationValue(value: unknown): PortfolioCertification {
+  if (!isRecord(value)) return createCertification();
+
+  return {
+    id: idValue(value.id),
+    name: stringValue(value.name),
+    issuer: stringValue(value.issuer),
+    issuedAt: stringValue(value.issuedAt),
+    expiresAt: stringValue(value.expiresAt),
+    url: stringValue(value.url),
   };
 }
 
@@ -223,6 +254,11 @@ function analyticsSummaryValue(value: unknown): PortfolioAnalyticsSummary {
     visitors: numberValue(value.visitors),
     clicks: numberValue(value.clicks),
     leads: numberValue(value.leads),
+    projectViews: numberValue(value.projectViews),
+    cvDownloads: numberValue(value.cvDownloads),
+    contactClicks: numberValue(value.contactClicks),
+    linkedinClicks: numberValue(value.linkedinClicks),
+    githubClicks: numberValue(value.githubClicks),
     avgReadSeconds: numberValue(value.avgReadSeconds),
     topReferrers: Array.isArray(value.topReferrers)
       ? value.topReferrers
@@ -231,6 +267,11 @@ function analyticsSummaryValue(value: unknown): PortfolioAnalyticsSummary {
       : [],
     topSections: Array.isArray(value.topSections)
       ? value.topSections
+          .map(analyticsDatumValue)
+          .filter((item): item is PortfolioAnalyticsDatum => Boolean(item))
+      : [],
+    topProjects: Array.isArray(value.topProjects)
+      ? value.topProjects
           .map(analyticsDatumValue)
           .filter((item): item is PortfolioAnalyticsDatum => Boolean(item))
       : [],
@@ -332,6 +373,12 @@ export function coercePortfolioDraft(value: unknown): PortfolioDraft | null {
     experience: Array.isArray(value.experience)
       ? value.experience.map(experienceValue)
       : draft.experience,
+    education: Array.isArray(value.education)
+      ? value.education.map(educationValue)
+      : draft.education,
+    certifications: Array.isArray(value.certifications)
+      ? value.certifications.map(certificationValue)
+      : draft.certifications,
     projects: Array.isArray(value.projects) ? value.projects.map(projectValue) : draft.projects,
     imports: Array.isArray(value.imports)
       ? value.imports
