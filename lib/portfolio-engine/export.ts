@@ -92,6 +92,7 @@ export function renderPortfolioExportHtml(draft: PortfolioDraft) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data: https:; img-src data: https: http:; media-src https: http:; connect-src 'none'; script-src 'none'; base-uri 'none'; form-action 'none';" />
     <title>${escapeHtml(portfolio.basics.name || "Portfolio")}</title>
     <style>
       body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #111827; background: #f8fafc; }

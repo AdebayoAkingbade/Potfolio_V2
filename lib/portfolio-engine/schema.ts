@@ -194,7 +194,7 @@ export function createDraft(
   return {
     id: draftId,
     portfolioVersion: 2,
-    plan: "pro",
+    plan: "free",
     profession,
     templateId,
     slug: "",
@@ -233,7 +233,7 @@ export function withPortfolioV2Defaults(
   return {
     ...draft,
     portfolioVersion: 2,
-    plan: "pro",
+    plan: draft.plan === "pro" ? "pro" : "free",
     education: Array.isArray(draft.education) ? draft.education : [],
     certifications: Array.isArray(draft.certifications) ? draft.certifications : [],
     projects: (Array.isArray(draft.projects) ? draft.projects : []).map((project) => ({

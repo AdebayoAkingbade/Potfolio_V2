@@ -37,17 +37,89 @@ export function sanitizeMultilineText(value: string, maxLength = 2400) {
   return value.replace(CONTROL_CHARS, "").trim().slice(0, maxLength);
 }
 
-export function sanitizeUrl(value: string) {
+/**
+ * Validates web URLs (HTTPS/HTTP). Denies mailto:, tel:, javascript:, and data: schemes.
+ * Used for websites, projects, certifications, and documentation links.
+ */
+export function sanitizeWebUrl(value: string): string {
   const trimmed = sanitizeText(value, 500);
   if (!trimmed) return "";
 
   try {
     const parsed = new URL(trimmed);
-    if (!["https:", "http:", "mailto:"].includes(parsed.protocol)) return "";
+    if (!["https:", "http:"].includes(parsed.protocol)) return "";
     return parsed.toString();
   } catch {
     return "";
   }
+}
+
+/**
+ * Validates generic hyperlinks (HTTPS, HTTP, mailto, tel).
+ * Used for social links and contact action targets.
+ */
+export function sanitizeHyperlinkUrl(value: string): string {
+  const trimmed = sanitizeText(value, 500);
+  if (!trimmed) return "";
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!["https:", "http:", "mailto:", "tel:"].includes(parsed.protocol)) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+// Backward-compatible alias
+export const sanitizeUrl = sanitizeHyperlinkUrl;
+
+/**
+ * Validates image sources: strictly HTTPS (or HTTP in local dev), or narrowly validated safe base64 data URLs.
+ * Rejects mailto:, tel:, javascript:, and non-image data URLs.
+ */
+export function sanitizeImageUrl(value: string): string {
+  const trimmed = sanitizeText(value, 1000);
+  if (!trimmed) return "";
+  if (SAFE_IMAGE_DATA_URL.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (!["https:", "http:"].includes(parsed.protocol)) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Validates video sources: strictly HTTPS (or HTTP in local dev), or narrowly validated safe base64 video URLs.
+ * Rejects mailto:, tel:, javascript:, and non-video data URLs.
+ */
+export function sanitizeVideoUrl(value: string): string {
+  const trimmed = sanitizeText(value, 1000);
+  if (!trimmed) return "";
+  if (SAFE_VIDEO_DATA_URL.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (!["https:", "http:"].includes(parsed.protocol)) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Validates phone numbers and strips dangerous scheme prefixes.
+ */
+export function sanitizePhone(value: string): string {
+  const trimmed = sanitizeText(value, 40);
+  if (!trimmed) return "";
+  const normalized = trimmed.replace(/^tel:/i, "").trim();
+  return /^[+()0-9\s.-]{7,25}$/.test(normalized) ? normalized : "";
 }
 
 function sanitizeDomainHostname(value: string) {
@@ -62,21 +134,21 @@ function sanitizeDomainHostname(value: string) {
 export function sanitizeEmail(value: string) {
   const email = sanitizeText(value, 254).toLowerCase();
   if (!email) return "";
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+  return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email) ? email : "";
 }
 
 export function sanitizeSocialLink(link: PortfolioSocialLink): PortfolioSocialLink {
   return {
     id: sanitizeText(link.id, 80) || crypto.randomUUID(),
     label: sanitizeText(link.label, 40),
-    url: sanitizeUrl(link.url),
+    url: sanitizeHyperlinkUrl(link.url),
   };
 }
 
 function sanitizeAsset(asset?: PortfolioAsset): PortfolioAsset | undefined {
   if (!asset) return undefined;
   const dataUrl = asset.dataUrl && SAFE_IMAGE_DATA_URL.test(asset.dataUrl) ? asset.dataUrl : "";
-  const url = asset.url ? sanitizeUrl(asset.url) : "";
+  const url = asset.url ? sanitizeImageUrl(asset.url) : "";
   if (!dataUrl && !url) return undefined;
   const kind: PortfolioAsset["kind"] =
     asset.kind === "video" || asset.kind === "document" ? asset.kind : "image";
@@ -96,7 +168,7 @@ function sanitizeAsset(asset?: PortfolioAsset): PortfolioAsset | undefined {
 
 function sanitizeVideoAsset(asset: PortfolioVideoAsset): PortfolioVideoAsset | null {
   const dataUrl = asset.dataUrl && SAFE_VIDEO_DATA_URL.test(asset.dataUrl) ? asset.dataUrl : "";
-  const url = asset.url ? sanitizeUrl(asset.url) : "";
+  const url = asset.url ? sanitizeVideoUrl(asset.url) : "";
   if (!dataUrl && !url) return null;
 
   return {
@@ -113,7 +185,7 @@ function sanitizeVideoAsset(asset: PortfolioVideoAsset): PortfolioVideoAsset | n
       typeof asset.durationSeconds === "number"
         ? Math.max(0, Math.min(asset.durationSeconds, 60 * 60 * 4))
         : undefined,
-    posterUrl: asset.posterUrl ? sanitizeUrl(asset.posterUrl) : undefined,
+    posterUrl: asset.posterUrl ? sanitizeImageUrl(asset.posterUrl) : undefined,
   };
 }
 
@@ -155,7 +227,15 @@ function sanitizeCertification(certification: PortfolioCertification): Portfolio
     issuer: sanitizeText(certification.issuer, 140),
     issuedAt: sanitizeText(certification.issuedAt, 40),
     expiresAt: sanitizeText(certification.expiresAt, 40),
-    url: sanitizeUrl(certification.url),
+    url: sanitizeWebUrl(certification.url),
+  };
+}
+
+function sanitizeProjectLink(link: PortfolioSocialLink): PortfolioSocialLink {
+  return {
+    id: sanitizeText(link.id, 80) || crypto.randomUUID(),
+    label: sanitizeText(link.label, 40),
+    url: sanitizeWebUrl(link.url),
   };
 }
 
@@ -168,7 +248,7 @@ function sanitizeProject(project: PortfolioProject): PortfolioProject {
     challenge: sanitizeMultilineText(project.challenge, 1200),
     outcome: sanitizeMultilineText(project.outcome, 1200),
     links: project.links
-      .map(sanitizeSocialLink)
+      .map(sanitizeProjectLink)
       .filter((link) => link.url)
       .slice(0, 4),
     videos: (project.videos ?? [])
@@ -332,7 +412,7 @@ export function sanitizeDraft(draft: PortfolioDraft): PortfolioDraft {
       summary: sanitizeMultilineText(basics.summary, 1600),
       location: sanitizeText(basics.location, 120),
       email: sanitizeEmail(basics.email),
-      phone: sanitizeText(basics.phone, 40),
+      phone: sanitizePhone(basics.phone),
       contactPreference: basics.contactPreference,
       socialLinks: basics.socialLinks
         .map(sanitizeSocialLink)

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data: https:; img-src data: https: http:; media-src https: http:; connect-src 'none'; script-src 'none'; base-uri 'none'; form-action 'none';" />
+    <title>Jane Security Architect</title>
+    <style>
+      body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #111827; background: #f8fafc; }
+      main { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: 56px 0; }
+      header, section { border: 1px solid #d1d5db; border-radius: 8px; background: white; padding: 28px; margin-bottom: 20px; }
+      h1 { font-size: clamp(40px, 8vw, 72px); line-height: 0.95; margin: 0; }
+      h2 { margin: 0 0 16px; }
+      article { border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px; }
+      ul { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+      li { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; }
+      a { color: #047857; margin-right: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1 id="portfolio-title">Jane Security Architect</h1>
+        <p id="portfolio-role">Principal Cloud Architect</p>
+        <p id="portfolio-summary">Designing high-assurance zero trust architectures and resilient distributed systems.</p>
+        <nav><a id="social-link" href="https://example.com" target="_blank" rel="noreferrer">Website</a></nav>
+      </header>
+      <section><h2>Skills</h2><ul id="skills-list"><li>Cloud Architecture</li><li>Kubernetes</li><li>Zero Trust</li></ul></section>
+      <section><h2>Experience</h2><article><h3>Staff Architect</h3><p>Enterprise Cloud</p><p>Led multi-region zero trust infrastructure rollout.</p></article></section>
+      <section><h2>Selected Work</h2><article><h3>Global IAM Migration</h3><p>Migrated 50k users.</p><strong>Zero downtime</strong></article></section>
+    </main>
+    <!-- Attempted inline script injection to verify CSP script-src 'none' enforcement -->
+    <script>
+      window.__csp_breached = true;
+    </script>
+  </body>
+</html>

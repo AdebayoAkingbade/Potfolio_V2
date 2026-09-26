@@ -65,7 +65,7 @@ export function getPortfolioEntitlements(plan: PortfolioPlan): EntitlementSet {
 }
 
 export function coercePortfolioPlan(plan: unknown): PortfolioPlan {
-  return plan === "free" ? "free" : "pro";
+  return plan === "pro" ? "pro" : "free";
 }
 
 export function hasPortfolioFeature(

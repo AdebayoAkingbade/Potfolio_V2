@@ -7,6 +7,9 @@ import {
 } from "@/lib/portfolio-engine/server/resume-documents";
 import { coercePortfolioDraft } from "@/lib/portfolio-engine/validation";
 
+import { checkDistributedRateLimit } from "@/lib/portfolio-engine/server/rate-limit";
+import { createSupabasePublicServerClient } from "@/lib/supabase/server";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
@@ -16,6 +19,20 @@ function errorResponse(message: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  const supabase = createSupabasePublicServerClient();
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+
+  const rateLimit = await checkDistributedRateLimit(
+    supabase,
+    clientIp,
+    10,
+    10 * 60 * 1000,
+    "resume_import",
+  );
+
+  if (!rateLimit.ok) {
+    return errorResponse("Too many resume import requests. Please try again later.", 429);
+  }
   const contentType = request.headers.get("content-type") ?? "";
   let text = "";
   let draftPayload: unknown = null;

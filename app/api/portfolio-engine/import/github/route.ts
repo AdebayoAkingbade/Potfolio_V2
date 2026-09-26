@@ -7,6 +7,9 @@ import {
 } from "@/lib/portfolio-engine/importers";
 import { coercePortfolioDraft } from "@/lib/portfolio-engine/validation";
 
+import { checkDistributedRateLimit } from "@/lib/portfolio-engine/server/rate-limit";
+import { createSupabasePublicServerClient } from "@/lib/supabase/server";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -49,6 +52,21 @@ async function fetchGitHubJson<T>(url: string) {
 }
 
 export async function POST(request: Request) {
+  const supabase = createSupabasePublicServerClient();
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+
+  const rateLimit = await checkDistributedRateLimit(
+    supabase,
+    clientIp,
+    10,
+    10 * 60 * 1000,
+    "github_import",
+  );
+
+  if (!rateLimit.ok) {
+    return errorResponse("Too many GitHub import requests. Please try again later.", 429);
+  }
+
   const body = await request.json().catch(() => null);
   const username =
     body && typeof body === "object" && typeof body.username === "string"

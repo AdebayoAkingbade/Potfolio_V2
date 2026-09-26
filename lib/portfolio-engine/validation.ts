@@ -38,7 +38,6 @@ import { portfolioTemplates } from "@/lib/portfolio-engine/templates";
 const professionKeys = new Set(professionConfigs.map((profession) => profession.key));
 const templateIds = new Set(portfolioTemplates.map((template) => template.id));
 const contactPreferences = new Set<ContactPreference>(["email", "linkedin", "website", "phone"]);
-const portfolioPlans = new Set<PortfolioPlan>(["free", "pro"]);
 const importSources = new Set<PortfolioImportSource>(["resume", "github", "clone"]);
 const teamRoles = new Set<PortfolioTeamRole>(["owner", "admin", "editor", "viewer"]);
 
@@ -74,7 +73,7 @@ function contactPreferenceValue(value: unknown): ContactPreference {
 }
 
 function planValue(value: unknown): PortfolioPlan {
-  return portfolioPlans.has(value as PortfolioPlan) ? (value as PortfolioPlan) : "pro";
+  return value === "pro" ? "pro" : "free";
 }
 
 function numberValue(value: unknown) {

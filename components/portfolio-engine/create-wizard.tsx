@@ -887,12 +887,11 @@ export function PortfolioCreateWizard({
     }
 
     const data = (await response.json()) as { checkoutUrl?: string | null; message?: string };
-    updateDraft((current) => ({ ...current, plan: "pro" }));
     if (data.checkoutUrl) {
       window.location.assign(data.checkoutUrl);
       return;
     }
-    setActionState(data.message ?? "Pro preview enabled");
+    setActionState(data.message ?? "Checkout initiated");
   };
 
   const exportPortfolio = (format: "json" | "html") => {

@@ -21,6 +21,13 @@ import {
   type PortfolioAnalyticsEvent,
 } from "@/lib/portfolio-engine/analytics";
 import { createSupabasePublicServerClient } from "@/lib/supabase/server";
+import {
+  getAuthoritativePlanForUser,
+  requireServerEntitlement,
+} from "@/lib/portfolio-engine/server/entitlements";
+import {
+  authorizeDraftAction,
+} from "@/lib/portfolio-engine/server/authorization";
 import type {
   PortfolioDraft,
   PortfolioTeamMember,
@@ -79,6 +86,15 @@ function databaseError(error: { message: string }) {
   return new Error(`Portfolio Engine database error: ${error.message}`);
 }
 
+function safeRevalidatePublication(slug: string) {
+  try {
+    revalidatePath(publishedPortfolioPath(slug));
+    revalidateTag(publishedPortfolioTag(slug));
+  } catch {
+    // Outside active Next.js request context (e.g. background tasks or unit tests)
+  }
+}
+
 export async function getActiveDraftForUser(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("portfolio_drafts")
@@ -97,11 +113,14 @@ export async function getDraftForUser(
   userId: string,
   draftId: string,
 ) {
+  // Authorize user to read draft (owner or active team member)
+  const authCheck = await authorizeDraftAction(supabase, userId, draftId, "READ_DRAFT");
+  if (!authCheck.ok) return null;
+
   const { data, error } = await supabase
     .from("portfolio_drafts")
     .select("id,user_id,slug,data,created_at,updated_at")
     .eq("id", draftId)
-    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) throw databaseError(error);
@@ -113,11 +132,31 @@ export async function upsertDraftForUser(
   userId: string,
   draft: PortfolioDraft,
 ) {
-  const sanitized = sanitizeDraft(draft);
+  // If draft exists, verify user has EDIT_DRAFT permission
+  const { data: existingDraft } = await supabase
+    .from("portfolio_drafts")
+    .select("id, user_id")
+    .eq("id", draft.id)
+    .maybeSingle();
+
+  if (existingDraft) {
+    const authCheck = await authorizeDraftAction(supabase, userId, draft.id, "EDIT_DRAFT");
+    if (!authCheck.ok) {
+      throw new Error(`Unauthorized: User cannot edit draft ${draft.id}`);
+    }
+  }
+
+  // Authoritatively derive the plan for the draft based on user account
+  const authoritativePlan = await getAuthoritativePlanForUser(supabase, userId);
+  const sanitized = sanitizeDraft({
+    ...draft,
+    plan: authoritativePlan,
+  });
+
   const timestamp = new Date().toISOString();
   const row = {
     id: sanitized.id,
-    user_id: userId,
+    user_id: existingDraft?.user_id ?? userId,
     slug: sanitized.slug || null,
     data: {
       ...sanitized,
@@ -136,7 +175,7 @@ export async function upsertDraftForUser(
   return toDraft(data as PortfolioDraftRow);
 }
 
-async function getLatestPublicationForDraft(
+export async function getLatestPublicationForDraft(
   supabase: SupabaseClient,
   userId: string,
   draftId: string,
@@ -147,7 +186,6 @@ async function getLatestPublicationForDraft(
       "id,source_draft_id,user_id,slug,data,version,score,published_at,deleted_at,created_at,updated_at",
     )
     .eq("source_draft_id", draftId)
-    .eq("user_id", userId)
     .is("deleted_at", null)
     .order("version", { ascending: false })
     .limit(1)
@@ -157,21 +195,68 @@ async function getLatestPublicationForDraft(
   return data ? toPublication(data as PublishedPortfolioRow) : null;
 }
 
-async function listLivePublishedSlugs(supabase: SupabaseClient) {
-  const { data, error } = await supabase
+/**
+ * Concurrency-safe check to determine if a slug is already taken by another active publication.
+ */
+export async function isSlugTaken(
+  supabase: SupabaseClient,
+  slug: string,
+  excludeDraftId?: string,
+): Promise<boolean> {
+  let query = supabase
     .from("portfolio_publications")
-    .select("slug")
+    .select("id, source_draft_id")
+    .eq("slug", slug)
     .is("deleted_at", null);
 
+  if (excludeDraftId) {
+    query = query.neq("source_draft_id", excludeDraftId);
+  }
+
+  const { data, error } = await query.limit(1).maybeSingle();
   if (error) throw databaseError(error);
-  return (data ?? []).map((row) => row.slug as string);
+  return Boolean(data);
 }
 
 export async function publishDraftForUser(
   supabase: SupabaseClient,
   userId: string,
   draftId: string,
+  idempotencyKey?: string,
 ) {
+  // 1. Authorize: Only owner or admin can publish
+  const authCheck = await authorizeDraftAction(supabase, userId, draftId, "PUBLISH_DRAFT");
+  if (!authCheck.ok) {
+    return {
+      ok: false as const,
+      status: authCheck.status,
+      errors: [authCheck.message],
+      publication: null,
+    };
+  }
+
+  // Gate 7: Publish Idempotency Check
+  // A network retry of the SAME request key returns the identical publication version
+  if (idempotencyKey) {
+    const { data: existingPublication } = await supabase
+      .from("portfolio_publications")
+      .select(
+        "id,source_draft_id,user_id,slug,data,version,score,published_at,deleted_at,created_at,updated_at",
+      )
+      .eq("source_draft_id", draftId)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (existingPublication) {
+      return {
+        ok: true as const,
+        status: 200,
+        errors: [],
+        publication: toPublication(existingPublication as PublishedPortfolioRow),
+      };
+    }
+  }
+
   const draft = await getDraftForUser(supabase, userId, draftId);
   if (!draft) {
     return {
@@ -182,7 +267,15 @@ export async function publishDraftForUser(
     };
   }
 
-  const preparedDraft = sanitizeDraft(updateDraftSlug(draft));
+  // Synchronize draft plan with authoritative account plan
+  const authoritativePlan = await getAuthoritativePlanForUser(supabase, userId);
+  const preparedDraft = sanitizeDraft(
+    updateDraftSlug({
+      ...draft,
+      plan: authoritativePlan,
+    }),
+  );
+
   const validation = validateDraftForPublish(preparedDraft);
   if (!validation.ok) {
     return {
@@ -193,13 +286,28 @@ export async function publishDraftForUser(
     };
   }
 
+  // Gate 5: Targeted concurrency-safe slug collision check
   const previousPublication = await getLatestPublicationForDraft(supabase, userId, draftId);
-  const existingSlugs = (await listLivePublishedSlugs(supabase)).filter(
-    (slug) => slug !== previousPublication?.slug,
-  );
+  let targetSlug = preparedDraft.slug;
+  let collisionCount = 0;
+
+  while (await isSlugTaken(supabase, targetSlug, draftId)) {
+    collisionCount += 1;
+    targetSlug = `${preparedDraft.slug}-${collisionCount}`;
+    if (collisionCount > 20) {
+      targetSlug = `${preparedDraft.slug}-${crypto.randomUUID().slice(0, 6)}`;
+      break;
+    }
+  }
+
+  const publishedDraft = {
+    ...preparedDraft,
+    slug: targetSlug,
+  };
+
   const result = createPublishedSnapshot(
-    preparedDraft,
-    existingSlugs,
+    publishedDraft,
+    [], // Slugs already reconciled via database check
     previousPublication?.version ?? 0,
   );
 
@@ -213,16 +321,34 @@ export async function publishDraftForUser(
   }
 
   const publication = result.publication;
-  const publicationId = previousPublication?.publicationId ?? publication.publicationId;
+  const newPublicationId = crypto.randomUUID();
   const publishedAt = new Date().toISOString();
   const publicationData: PublishedPortfolio = {
     ...publication,
-    publicationId,
+    publicationId: newPublicationId,
     publishedAt,
   };
 
+  // Gate 6: Demote prior live version of this draft without mutating historical snapshot data!
+  await supabase
+    .from("portfolio_publications")
+    .update({ is_live: false, updated_at: publishedAt })
+    .eq("source_draft_id", draftId)
+    .eq("is_live", true);
+
+  // If slug changed from previous publication, soft-delete previous active version under old slug
+  if (previousPublication && previousPublication.slug !== publicationData.slug) {
+    await supabase
+      .from("portfolio_publications")
+      .update({ deleted_at: publishedAt, updated_at: publishedAt })
+      .eq("id", previousPublication.publicationId);
+    
+    safeRevalidatePublication(previousPublication.slug);
+  }
+
+  // 3. Immutable version snapshot insertion
   const row = {
-    id: publicationId,
+    id: newPublicationId,
     source_draft_id: draftId,
     user_id: userId,
     slug: publicationData.slug,
@@ -231,54 +357,61 @@ export async function publishDraftForUser(
     score: publicationData.score.score,
     published_at: publishedAt,
     deleted_at: null,
+    is_live: true,
+    idempotency_key: idempotencyKey || null,
+    created_at: publishedAt,
     updated_at: publishedAt,
   };
 
-  const writeQuery = previousPublication
-    ? supabase
+  const { data, error } = await supabase
+    .from("portfolio_publications")
+    .insert(row)
+    .select(
+      "id,source_draft_id,user_id,slug,data,version,score,published_at,deleted_at,created_at,updated_at",
+    )
+    .single();
+
+  if (error) {
+    // Under concurrency, if idempotency key was simultaneously written, fetch and return it
+    if (idempotencyKey) {
+      const { data: existingPub } = await supabase
         .from("portfolio_publications")
-        .update(row)
-        .eq("id", publicationId)
-        .eq("user_id", userId)
         .select(
           "id,source_draft_id,user_id,slug,data,version,score,published_at,deleted_at,created_at,updated_at",
         )
-        .single()
-    : supabase
-        .from("portfolio_publications")
-        .insert(row)
-        .select(
-          "id,source_draft_id,user_id,slug,data,version,score,published_at,deleted_at,created_at,updated_at",
-        )
-        .single();
+        .eq("source_draft_id", draftId)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
 
-  const { data, error } = await writeQuery;
-  if (error) throw databaseError(error);
+      if (existingPub) {
+        return {
+          ok: true as const,
+          status: 200,
+          errors: [],
+          publication: toPublication(existingPub as PublishedPortfolioRow),
+        };
+      }
+    }
+    throw databaseError(error);
+  }
 
+  // Update draft with publication slug and timestamp
   const nextDraft = {
     ...preparedDraft,
     slug: publicationData.slug,
     updatedAt: publishedAt,
   };
 
-  const { error: draftError } = await supabase
+  await supabase
     .from("portfolio_drafts")
     .update({
       slug: publicationData.slug,
       data: nextDraft,
       updated_at: publishedAt,
     })
-    .eq("id", draftId)
-    .eq("user_id", userId);
+    .eq("id", draftId);
 
-  if (draftError) throw databaseError(draftError);
-
-  revalidatePath(publishedPortfolioPath(publicationData.slug));
-  revalidateTag(publishedPortfolioTag(publicationData.slug));
-  if (previousPublication?.slug && previousPublication.slug !== publicationData.slug) {
-    revalidatePath(publishedPortfolioPath(previousPublication.slug));
-    revalidateTag(publishedPortfolioTag(previousPublication.slug));
-  }
+  safeRevalidatePublication(publicationData.slug);
 
   return {
     ok: true as const,
@@ -288,7 +421,7 @@ export async function publishDraftForUser(
   };
 }
 
-async function getPublishedPortfolioBySlugUncached(slug: string) {
+export async function getPublishedPortfolioBySlugUncached(slug: string) {
   const supabase = createSupabasePublicServerClient();
   if (!supabase) return null;
 
@@ -299,6 +432,8 @@ async function getPublishedPortfolioBySlugUncached(slug: string) {
     )
     .eq("slug", slug)
     .is("deleted_at", null)
+    .order("version", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) throw databaseError(error);
@@ -337,8 +472,7 @@ export async function deletePublishedPortfolioForUser(
 
   if (error) throw databaseError(error);
 
-  revalidatePath(publishedPortfolioPath(slug));
-  revalidateTag(publishedPortfolioTag(slug));
+  safeRevalidatePublication(slug);
 
   return (data ?? []).length > 0;
 }
@@ -348,11 +482,16 @@ export async function deleteDraftForUser(
   userId: string,
   draftId: string,
 ) {
+  // Only owner can delete draft
+  const authCheck = await authorizeDraftAction(supabase, userId, draftId, "DELETE_DRAFT");
+  if (!authCheck.ok) {
+    throw new Error(`Unauthorized: User cannot delete draft ${draftId}`);
+  }
+
   const { data: affectedPublications, error: publicationReadError } = await supabase
     .from("portfolio_publications")
     .select("slug")
     .eq("source_draft_id", draftId)
-    .eq("user_id", userId)
     .is("deleted_at", null);
 
   if (publicationReadError) throw databaseError(publicationReadError);
@@ -361,15 +500,13 @@ export async function deleteDraftForUser(
     .from("portfolio_drafts")
     .delete()
     .eq("id", draftId)
-    .eq("user_id", userId)
     .select("id");
 
   if (error) throw databaseError(error);
 
   for (const publication of affectedPublications ?? []) {
     const slug = publication.slug as string;
-    revalidatePath(publishedPortfolioPath(slug));
-    revalidateTag(publishedPortfolioTag(slug));
+    safeRevalidatePublication(slug);
   }
 
   return (data ?? []).length > 0;
@@ -393,6 +530,28 @@ export async function upsertCustomDomainForDraft(
   draftId: string,
   hostnameInput: string,
 ) {
+  // 1. Authorize: Check permission to configure domain
+  const authCheck = await authorizeDraftAction(supabase, userId, draftId, "CUSTOM_DOMAIN");
+  if (!authCheck.ok) {
+    return {
+      ok: false as const,
+      status: authCheck.status,
+      errors: [authCheck.message],
+      draft: null,
+    };
+  }
+
+  // 2. Server-side entitlement check: require Pro
+  const entitlementCheck = await requireServerEntitlement(supabase, userId, "customDomains");
+  if (!entitlementCheck.ok) {
+    return {
+      ok: false as const,
+      status: entitlementCheck.status,
+      errors: [entitlementCheck.message],
+      draft: null,
+    };
+  }
+
   const hostname = cleanDomainHostname(hostnameInput);
   if (!isValidDomain(hostname)) {
     return {
@@ -417,7 +576,6 @@ export async function upsertCustomDomainForDraft(
   const domain = createPortfolioDomain(hostname);
   const nextDraft = await upsertDraftForUser(supabase, userId, {
     ...draft,
-    plan: "pro",
     customDomain: domain,
     updatedAt: timestamp,
   });
@@ -454,6 +612,28 @@ export async function inviteTeamMemberForDraft(
   email: string,
   role: PortfolioTeamRole = "editor",
 ) {
+  // 1. Authorize: Check permission to invite member
+  const authCheck = await authorizeDraftAction(supabase, userId, draftId, "INVITE_MEMBER");
+  if (!authCheck.ok) {
+    return {
+      ok: false as const,
+      status: authCheck.status,
+      errors: [authCheck.message],
+      draft: null,
+    };
+  }
+
+  // 2. Server-side entitlement check: require Pro team seats
+  const entitlementCheck = await requireServerEntitlement(supabase, userId, "teamSeats");
+  if (!entitlementCheck.ok) {
+    return {
+      ok: false as const,
+      status: entitlementCheck.status,
+      errors: [entitlementCheck.message],
+      draft: null,
+    };
+  }
+
   const draft = await getDraftForUser(supabase, userId, draftId);
   if (!draft) {
     return {
@@ -464,22 +644,24 @@ export async function inviteTeamMemberForDraft(
     };
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
   const normalized = withPortfolioV2Defaults(draft);
   const existing = normalized.team.members.some(
-    (member) => member.email.toLowerCase() === email.toLowerCase(),
+    (member) => member.email.toLowerCase() === normalizedEmail,
   );
+
   const member: PortfolioTeamMember = {
     id: crypto.randomUUID(),
-    name: email.split("@")[0] ?? "Teammate",
-    email,
+    name: normalizedEmail.split("@")[0] ?? "Teammate",
+    email: normalizedEmail,
     role,
     status: "invited",
     invitedAt: new Date().toISOString(),
   };
+
   const members = existing ? normalized.team.members : [...normalized.team.members, member];
   const nextDraft = await upsertDraftForUser(supabase, userId, {
     ...normalized,
-    plan: "pro",
     team: {
       ...normalized.team,
       agencyMode: true,
@@ -494,7 +676,10 @@ export async function inviteTeamMemberForDraft(
         id: member.id,
         user_id: userId,
         draft_id: draftId,
-        email: member.email,
+        email: normalizedEmail,
+        invited_email: normalizedEmail,
+        invited_by: userId,
+        member_user_id: null,
         name: member.name,
         role: member.role,
         status: member.status,
@@ -513,6 +698,44 @@ export async function inviteTeamMemberForDraft(
     errors: [],
     draft: nextDraft,
   };
+}
+
+export async function acceptTeamInvitation(
+  supabase: SupabaseClient,
+  userId: string,
+  userEmail: string,
+  inviteId: string,
+) {
+  const normalizedEmail = userEmail.trim().toLowerCase();
+
+  const { data: invite, error: fetchError } = await supabase
+    .from("portfolio_team_members")
+    .select("id, draft_id, invited_email, status")
+    .eq("id", inviteId)
+    .maybeSingle();
+
+  if (fetchError || !invite) {
+    return { ok: false as const, status: 404, message: "Invitation not found." };
+  }
+
+  if (invite.invited_email.toLowerCase() !== normalizedEmail) {
+    return { ok: false as const, status: 403, message: "Invitation was issued for a different email address." };
+  }
+
+  const timestamp = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from("portfolio_team_members")
+    .update({
+      member_user_id: userId,
+      status: "active",
+      accepted_at: timestamp,
+      updated_at: timestamp,
+    })
+    .eq("id", inviteId);
+
+  if (updateError) throw databaseError(updateError);
+
+  return { ok: true as const, status: 200, draftId: invite.draft_id as string };
 }
 
 export async function cloneDraftForUser(
