@@ -29,11 +29,13 @@ const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const SAFE_IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp);base64,/i;
 const SAFE_VIDEO_DATA_URL = /^data:video\/(mp4|webm|quicktime);base64,/i;
 
-export function sanitizeText(value: string, maxLength = 1200) {
+export function sanitizeText(value: string = "", maxLength = 1200) {
+  if (typeof value !== "string") return "";
   return value.replace(CONTROL_CHARS, "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
-export function sanitizeMultilineText(value: string, maxLength = 2400) {
+export function sanitizeMultilineText(value: string = "", maxLength = 2400) {
+  if (typeof value !== "string") return "";
   return value.replace(CONTROL_CHARS, "").trim().slice(0, maxLength);
 }
 
@@ -239,7 +241,30 @@ function sanitizeProjectLink(link: PortfolioSocialLink): PortfolioSocialLink {
   };
 }
 
-function sanitizeProject(project: PortfolioProject): PortfolioProject {
+export function sanitizeProjectForPublication(
+  project: PortfolioProject,
+): PortfolioProject | null {
+  if (project.visibility === "private") {
+    return null;
+  }
+
+  if (project.visibility === "stealth") {
+    return {
+      id: sanitizeText(project.id, 80) || crypto.randomUUID(),
+      title: sanitizeText(project.title, 140),
+      role: sanitizeText(project.role, 120),
+      summary: sanitizeMultilineText(project.summary, 1200),
+      challenge: "", // Confidential implementation details stripped
+      outcome:
+        sanitizeMultilineText(project.outcome, 1200) || "In Active Development",
+      links: [], // Sensitive development/repository URLs stripped
+      videos: [], // Private video demonstrations stripped
+      visibility: "stealth",
+      statusText: sanitizeText(project.statusText, 80) || "AI Product · In Development",
+      safeCapabilities: (project.safeCapabilities ?? []).map((c) => sanitizeText(c, 80)).filter(Boolean),
+    };
+  }
+
   return {
     id: sanitizeText(project.id, 80) || crypto.randomUUID(),
     title: sanitizeText(project.title, 140),
@@ -247,7 +272,7 @@ function sanitizeProject(project: PortfolioProject): PortfolioProject {
     summary: sanitizeMultilineText(project.summary, 1200),
     challenge: sanitizeMultilineText(project.challenge, 1200),
     outcome: sanitizeMultilineText(project.outcome, 1200),
-    links: project.links
+    links: (project.links ?? [])
       .map(sanitizeProjectLink)
       .filter((link) => link.url)
       .slice(0, 4),
@@ -255,8 +280,12 @@ function sanitizeProject(project: PortfolioProject): PortfolioProject {
       .map(sanitizeVideoAsset)
       .filter((asset): asset is PortfolioVideoAsset => Boolean(asset))
       .slice(0, 3),
+    visibility: "public",
+    statusText: project.statusText ? sanitizeText(project.statusText, 80) : undefined,
+    safeCapabilities: project.safeCapabilities?.map((c) => sanitizeText(c, 80)),
   };
 }
+
 
 function sanitizeImportRecord(record: PortfolioImportRecord): PortfolioImportRecord {
   const source =
@@ -427,7 +456,10 @@ export function sanitizeDraft(draft: PortfolioDraft): PortfolioDraft {
     experience: normalized.experience.map(sanitizeExperience).slice(0, 12),
     education: normalized.education.map(sanitizeEducation).slice(0, 12),
     certifications: normalized.certifications.map(sanitizeCertification).slice(0, 12),
-    projects: normalized.projects.map(sanitizeProject).slice(0, 12),
+    projects: normalized.projects
+      .map(sanitizeProjectForPublication)
+      .filter((project): project is PortfolioProject => project !== null)
+      .slice(0, 12),
     imports: normalized.imports.map(sanitizeImportRecord).slice(0, 20),
     customDomain: sanitizeCustomDomain(normalized.customDomain),
     analytics: sanitizeAnalyticsSummary(normalized.analytics),

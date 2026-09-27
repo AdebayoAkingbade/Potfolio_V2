@@ -57,13 +57,13 @@ Jan 2024 - May 2026
 ## Selected Projects
 
 - Ecobank Business App and Mobile 5 Admin: Onboarding, request management, audit trails, campaign management, document configuration, feature controls, and maker-checker workflows.
-- AGuard AI Filter: AI filtering layer for detecting, moderating, and routing unsafe or unwanted content. https://github.com/AdebayoAkingbade/AGuard
+- AGuard AI Filter: AI initiative in active development for safer and more intelligent digital experiences. (Stealth · Details available on request)
 - Document Management System, Ecobank: End-to-end document management across Ecobank digital channels, designed to support RPC workflows.
 - Referral and Rewards System, Ecobank: Rewards administration system for referrers who bring new users to Ecobank mobile platforms.
 - Belrald School Management: Authentication, authorization, onboarding, recovery, and dynamic RBAC for institutions and staff. https://belrald.com/
 - Àwárí - Autonomous Root-Cause Engineering: AI agent investigating 14 correlated signals across 3 services. https://github.com/AdebayoAkingbade/Awari
 - OSTEC-SE Cybersecurity Platform: https://ostec-se.vercel.app/board-reports
-- Kudipal: Nigeria's first WhatsApp SME platform. https://nigeria-first-ai-ops-copilot.vercel.app/
+- Kudipal: AI-powered product in active development for intelligent SME operations. (Stealth · Details available on request)
 
 ## Core Skills
 

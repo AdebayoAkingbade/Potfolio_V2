@@ -24,6 +24,8 @@ export type Experience = {
 export type ProjectCategory =
   "Fintech" | "Platform" | "AI" | "Education" | "Commerce" | "Security";
 
+export type ProjectVisibility = "public" | "stealth" | "private";
+
 export type Project = {
   slug: string;
   title: string;
@@ -47,6 +49,12 @@ export type Project = {
   lessons: string[];
   codeSnippet: string;
   gallery: string[];
+  visibility?: ProjectVisibility;
+  statusText?: string;
+  safeDescription?: string;
+  capabilitiesDemonstrated?: string[];
+  safeCtaLabel?: string;
+  developmentStatus?: string;
 };
 
 export type Testimonial = {

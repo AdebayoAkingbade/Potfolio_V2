@@ -78,13 +78,28 @@ export function renderPortfolioExportHtml(draft: PortfolioDraft) {
     )
     .join("");
   const projects = portfolio.projects
-    .map(
-      (project) => `<article>
+    .filter((project) => project.visibility !== "private")
+    .map((project) => {
+      if (project.visibility === "stealth") {
+        const badge = escapeHtml(project.statusText || "In Development · Stealth");
+        const safeCaps = (project.safeCapabilities ?? [])
+          .map((cap) => `<li>${escapeHtml(cap)}</li>`)
+          .join("");
+        return `<article>
+          <div style="display:inline-block; font-size:12px; font-weight:600; padding:2px 8px; border-radius:4px; background:#fef3c7; color:#92400e; margin-bottom:8px;">${badge}</div>
+          <h3>${escapeHtml(project.title || "Project")}</h3>
+          <p>${escapeHtml(project.summary || "AI initiative currently under active development. Details are intentionally limited prior to public release.")}</p>
+          ${safeCaps ? `<ul style="margin-top:8px;">${safeCaps}</ul>` : ""}
+          <p style="font-size:13px; color:#6b7280; margin-top:8px;">Details available on request</p>
+        </article>`;
+      }
+
+      return `<article>
         <h3>${escapeHtml(project.title || "Project")}</h3>
         <p>${escapeHtml(project.summary || "")}</p>
         <strong>${escapeHtml(project.outcome || "")}</strong>
-      </article>`,
-    )
+      </article>`;
+    })
     .join("");
 
   return `<!doctype html>

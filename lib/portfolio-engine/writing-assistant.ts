@@ -16,6 +16,11 @@ export function buildProjectSuggestion(project: PortfolioProject, draft: Portfol
   const profession = getProfessionConfig(draft.profession);
   const title = sanitizeText(project.title, 100) || "Selected project";
   const role = sanitizeText(project.role, 100) || draft.basics.title || profession.label;
+
+  if (project.visibility === "stealth") {
+    return `${title} is an AI initiative currently in active development where I lead as ${role}. Details and implementation specifics are intentionally limited prior to public release, focusing on core system architecture and demonstrable engineering capabilities.`;
+  }
+
   const outcome =
     sanitizeText(project.outcome, 220) || "a clearer, more useful outcome for the audience.";
 

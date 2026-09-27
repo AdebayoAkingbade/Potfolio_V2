@@ -1,183 +1,14 @@
-import type {
-  Achievement,
-  BlogPost,
-  Experience,
-  Project,
-  Skill,
-  SkillCategory,
-  SocialKey,
-  Testimonial,
-} from "@/types/site";
+import type { Project } from "@/types/site";
 
-export const siteConfig = {
-  name: "Akingbade",
-  role: "Senior Software Engineer",
-  intro:
-    "I build secure fintech, education, commerce, and AI-powered platforms that turn complex workflows into dependable product experiences.",
-  location: "Lagos, Nigeria",
-  url: "https://akingbacrown.dev",
-  email: "adejeremih@gmail.com",
-  github: "https://github.com/akingbacrown",
-  linkedin: "https://www.linkedin.com/in/adebayo-akingbade-0692b5161",
-  calendar: "https://cal.com/akingbacrown/intro",
-  resume: "/files/akingba-crown-resume.md",
-  initials: "AA",
-};
-
-export const navItems = [
-  { label: "About", href: "#about" },
-  { label: "Skills", href: "#skills" },
-  { label: "Experience", href: "#experience" },
-  { label: "Engine", href: "/portfolio-engine" },
-  { label: "Projects", href: "#projects" },
-  { label: "Writing", href: "#blog" },
-  { label: "Contact", href: "#contact" },
-];
-
-export const socialLinks: Array<{ key: SocialKey; label: string; href: string }> = [
-  { key: "github", label: "GitHub", href: siteConfig.github },
-  { key: "linkedin", label: "LinkedIn", href: siteConfig.linkedin },
-  { key: "resume", label: "Resume", href: siteConfig.resume },
-  { key: "email", label: "Email", href: `mailto:${siteConfig.email}` },
-];
-
-export const stats = [
-  { value: 6, suffix: "+", label: "Years of experience" },
-  { value: 30, suffix: "+", label: "Countries supported" },
-  { value: 8, suffix: "+", label: "Major platforms shipped" },
-  { value: 1000, suffix: "+", label: "Daily users supported" },
-];
-
-export const skillCategories: SkillCategory[] = [
-  "Frontend",
-  "Backend",
-  "Cloud",
-  "DevOps",
-  "AI",
-  "Mobile",
-  "Databases",
-];
-
-export const skills: Skill[] = [
-  { name: "React", category: "Frontend", experience: "7 yrs", icon: "atom", level: 96 },
-  { name: "Next.js", category: "Frontend", experience: "5 yrs", icon: "layers", level: 94 },
-  { name: "Angular", category: "Frontend", experience: "4 yrs", icon: "blocks", level: 88 },
-  { name: "TypeScript", category: "Frontend", experience: "6 yrs", icon: "braces", level: 95 },
-  { name: "Java", category: "Backend", experience: "5 yrs", icon: "code", level: 89 },
-  { name: "Spring Boot", category: "Backend", experience: "4 yrs", icon: "server", level: 88 },
-  { name: "Node.js", category: "Backend", experience: "7 yrs", icon: "server", level: 91 },
-  { name: "NestJS", category: "Backend", experience: "4 yrs", icon: "boxes", level: 84 },
-  { name: "GraphQL", category: "Backend", experience: "5 yrs", icon: "share", level: 88 },
-  { name: "Firebase", category: "Cloud", experience: "4 yrs", icon: "cloud", level: 84 },
-  { name: "Vercel", category: "Cloud", experience: "4 yrs", icon: "triangle", level: 90 },
-  { name: "Docker", category: "DevOps", experience: "6 yrs", icon: "container", level: 88 },
-  { name: "CI/CD", category: "DevOps", experience: "6 yrs", icon: "workflow", level: 90 },
-  { name: "Python NLP", category: "AI", experience: "3 yrs", icon: "brain", level: 85 },
-  { name: "AI Filters", category: "AI", experience: "2 yrs", icon: "network", level: 82 },
-  {
-    name: "Mobile Admin",
-    category: "Mobile",
-    experience: "3 yrs",
-    icon: "smartphone",
-    level: 80,
-  },
-  {
-    name: "PostgreSQL",
-    category: "Databases",
-    experience: "6 yrs",
-    icon: "database",
-    level: 89,
-  },
-  { name: "Redis", category: "Databases", experience: "5 yrs", icon: "zap", level: 82 },
-];
-
-export const experiences: Experience[] = [
-  {
-    company: "Ecobank Transnational Incorporated",
-    role: "Software Engineer (Contract)",
-    duration: "Jan 2024 - May 2026",
-    summary:
-      "Built and scaled fintech onboarding, administration, and automation systems used across 30+ countries and thousands of daily users.",
-    responsibilities: [
-      "Translated business requirements into maintainable applications across Java Spring Boot, Next.js, React, and Angular using MVC-aligned structures.",
-      "Designed and implemented SSO and role-based access control to strengthen security and access management.",
-      "Led core admin portal development for Ecobank Business App and Mobile 5 across onboarding, request management, audit trails, campaign management, and document configuration.",
-      "Built real-time notification systems and AI-powered automation workflows with Python and NLP.",
-    ],
-    technologies: [
-      "Java",
-      "Spring Boot",
-      "Next.js",
-      "React",
-      "Angular",
-      "Python",
-      "NLP",
-      "SSO",
-      "RBAC",
-    ],
-    achievements: [
-      "Supported digital banking operations across 30+ affiliates.",
-      "Improved governance with configurable feature controls, audit trails, and maker-checker approvals.",
-      "Reduced support response time through AI-assisted workflow automation.",
-    ],
-  },
-  {
-    company: "Belrald",
-    role: "Software Engineer (Contract)",
-    duration: "2024",
-    summary:
-      "Designed backend services for a school management platform, including scalable APIs, authentication, and flexible permission controls.",
-    responsibilities: [
-      "Designed backend services using NestJS with scalable API boundaries.",
-      "Implemented institution and staff onboarding, password creation, password reset, and account recovery workflows.",
-      "Built dynamic RBAC systems for role creation and permission mapping across the platform.",
-    ],
-    technologies: ["NestJS", "Node.js", "TypeScript", "RBAC", "Authentication", "REST APIs"],
-    achievements: [
-      "Established a reusable access-control model for institutions and staff.",
-      "Improved account recovery and onboarding reliability.",
-      "Created backend foundations for a multi-role education product.",
-    ],
-  },
-  {
-    company: "Conclase",
-    role: "Lead Frontend Engineer",
-    duration: "2021 - 2023",
-    summary:
-      "Led enterprise Next.js and React application development while mentoring junior engineers and improving internal workflows.",
-    responsibilities: [
-      "Led frontend architecture for enterprise dashboards and workflow-heavy applications.",
-      "Mentored junior engineers through implementation reviews and reusable UI patterns.",
-      "Built dashboards that improved onboarding and internal operational visibility.",
-    ],
-    technologies: ["Next.js", "React", "TypeScript", "Dashboards", "Frontend Architecture"],
-    achievements: [
-      "Improved onboarding workflows through clearer dashboard experiences.",
-      "Raised frontend maintainability with shared patterns and team guidance.",
-      "Helped junior engineers grow through practical delivery mentorship.",
-    ],
-  },
-  {
-    company: "Decagon",
-    role: "Software Engineer",
-    duration: "2020 - 2021",
-    summary:
-      "Co-developed Web3 finance and commerce products, contributing heavily to admin dashboards, GraphQL integrations, and Dockerized delivery environments.",
-    responsibilities: [
-      "Co-developed a Web3 finance platform and delivered over 50% of the admin dashboard features.",
-      "Worked with GraphQL APIs to connect product workflows to backend services.",
-      "Built full-stack commerce workflows with React, Spring Boot, Firebase, payments, bookings, and user management.",
-    ],
-    technologies: ["React", "TypeScript", "Spring Boot", "GraphQL", "Docker", "Firebase"],
-    achievements: [
-      "Delivered a major share of admin dashboard functionality for a finance platform.",
-      "Contributed in Dockerized environments across frontend and backend services.",
-      "Built production-ready commerce flows spanning payments, bookings, and users.",
-    ],
-  },
-];
-
-export const projects: Project[] = [
+/**
+ * Authenticated owner / builder private project repository.
+ * Contains full, confidential project data including private development environments,
+ * internal staging URLs, source code repositories, and proprietary implementation notes.
+ *
+ * THIS MODULE MUST ONLY BE ACCESSED WITHIN AUTHENTICATED / SERVER DOMAINS.
+ * It is NOT exported to public client components.
+ */
+export const rawProjects: Project[] = [
   {
     slug: "ecobank-business-mobile-admin",
     title: "Ecobank Business App and Mobile 5 Admin",
@@ -186,7 +17,11 @@ export const projects: Project[] = [
       "Admin and configuration systems for onboarding, requests, audit trails, campaigns, documents, feature controls, and maker-checker approvals across Ecobank digital banking channels.",
     image: "/images/projects/atlas-observability.png",
     stack: ["Angular", "React", "Next.js", "Java", "Spring Boot", "SSO", "RBAC"],
-    metrics: ["30+ affiliates", "Maker-checker approvals", "Audit-backed controls"],
+    metrics: [
+      "30+ affiliates",
+      "Maker-checker approvals",
+      "Audit-backed controls",
+    ],
     year: "2024 - 2026",
     role: "Software Engineer",
     problem:
@@ -233,6 +68,7 @@ export const projects: Project[] = [
     ],
     codeSnippet: `const request = await submitForApproval({\n  service: "transfers",\n  action: "disable",\n  reason,\n  makerId: user.id,\n});`,
     gallery: ["/images/projects/atlas-observability.png"],
+    visibility: "public",
   },
   {
     slug: "aguard-ai-filter",
@@ -245,6 +81,7 @@ export const projects: Project[] = [
     image: "/images/projects/orbit-commerce.png",
     stack: ["Python", "AI Safety", "Content Filtering", "NLP", "Product Architecture"],
     metrics: ["In Development", "AI Initiative", "Private Beta"],
+    githubUrl: "https://github.com/AdebayoAkingbade/AGuard",
     year: "2026",
     role: "Founder / Product Engineer",
     visibility: "stealth",
@@ -257,17 +94,49 @@ export const projects: Project[] = [
       "Full-Stack Engineering",
     ],
     problem:
-      "Proprietary AI initiative under active development. Architectural capabilities and engineering rigor are demonstrated while protecting unreleased product mechanics.",
-    research: [],
-    planning: [],
-    architecture: [],
-    systemDesign: [],
-    challenges: [],
-    solutions: [],
-    performance: [],
-    lessons: [],
-    codeSnippet: "",
-    gallery: [],
+      "AI products need a practical filtering layer that can inspect user input and model output before risky content moves deeper into an application.",
+    research: [
+      "Reviewed common content-risk patterns that can appear in user prompts and generated responses.",
+      "Mapped which filter decisions should block, warn, redact, or route content for another review step.",
+      "Studied how lightweight safety checks can fit into existing AI product workflows.",
+    ],
+    planning: [
+      "Defined filter stages for input inspection, output inspection, and decision logging.",
+      "Planned policy-aware checks so rules can evolve without rewriting the entire pipeline.",
+      "Kept the project focused on being easy to integrate while the core filter logic matures.",
+    ],
+    architecture: [
+      "Filtering logic evaluates content before it is passed to downstream AI workflows.",
+      "Policy checks produce structured decisions that calling applications can act on.",
+      "The project is organized as a reusable safety layer rather than a single-purpose assistant.",
+    ],
+    systemDesign: [
+      "Filter results separate allow, block, warn, and review outcomes.",
+      "Decision metadata gives applications enough context to explain or audit safety behavior.",
+      "The pipeline can be extended with additional policies as the project grows.",
+    ],
+    challenges: [
+      "Safety tooling needs clear decisions without becoming too rigid for real products.",
+      "Filtering has to balance useful AI interactions with responsible boundaries.",
+      "The project needs to stay simple enough to adopt while still leaving room for stronger checks.",
+    ],
+    solutions: [
+      "Designed the filter around explicit outcomes instead of vague pass or fail behavior.",
+      "Kept policy checks modular so new risk categories can be added cleanly.",
+      "Focused on reusable integration points that can sit in front of different AI features.",
+    ],
+    performance: [
+      "Established a foundation for safer AI request and response handling.",
+      "Kept the filtering layer lightweight enough for product-facing workflows.",
+      "Made safety decisions easier to inspect while the system continues evolving.",
+    ],
+    lessons: [
+      "AI filters need transparent behavior because teams must understand why content was handled a certain way.",
+      "Safety systems are easier to improve when policies are separate from product-specific code.",
+      "A useful guard layer should reduce risk without making every interaction feel blocked.",
+    ],
+    codeSnippet: `const decision = await filterContent({\n  input,\n  policies: activePolicies,\n  context: productSurface,\n});`,
+    gallery: ["/images/projects/orbit-commerce.png"],
   },
   {
     slug: "ecobank-document-management-system",
@@ -277,7 +146,11 @@ export const projects: Project[] = [
       "An end-to-end document management platform for Ecobank digital channels, built to support RPC workflows and centralized document control.",
     image: "/images/projects/kinetic-planner.png",
     stack: ["Angular", "Java", "Spring Boot", "RBAC", "Audit Trails"],
-    metrics: ["Digital channel support", "RPC enablement", "End-to-end document flow"],
+    metrics: [
+      "Digital channel support",
+      "RPC enablement",
+      "End-to-end document flow",
+    ],
     year: "2025",
     role: "Software Engineer",
     problem:
@@ -324,6 +197,7 @@ export const projects: Project[] = [
     ],
     codeSnippet: `await documents.updateStatus({\n  documentId,\n  nextStatus: "reviewed",\n  actorId: user.id,\n});`,
     gallery: ["/images/projects/kinetic-planner.png"],
+    visibility: "public",
   },
   {
     slug: "ecobank-referral-rewards",
@@ -333,7 +207,11 @@ export const projects: Project[] = [
       "A rewards administration system for managing referrers who bring new users to Ecobank mobile platforms.",
     image: "/images/projects/atlas-observability.png",
     stack: ["React", "Java", "Spring Boot", "RBAC", "Notifications"],
-    metrics: ["Referral tracking", "Rewards administration", "Mobile platform growth"],
+    metrics: [
+      "Referral tracking",
+      "Rewards administration",
+      "Mobile platform growth",
+    ],
     year: "2025",
     role: "Software Engineer",
     problem:
@@ -380,6 +258,7 @@ export const projects: Project[] = [
     ],
     codeSnippet: `await rewards.approve({\n  referralId,\n  reviewerId: user.id,\n  note: approvalNote,\n});`,
     gallery: ["/images/projects/atlas-observability.png"],
+    visibility: "public",
   },
   {
     slug: "belrald-school-management",
@@ -389,7 +268,11 @@ export const projects: Project[] = [
       "Authentication, authorization, onboarding, password recovery, and dynamic RBAC modules for Belrald's school management platform.",
     image: "/images/projects/kinetic-planner.png",
     stack: ["NestJS", "Node.js", "TypeScript", "Authentication", "RBAC"],
-    metrics: ["Institution onboarding", "Dynamic permissions", "Account recovery"],
+    metrics: [
+      "Institution onboarding",
+      "Dynamic permissions",
+      "Account recovery",
+    ],
     liveUrl: "https://belrald.com/",
     year: "2024",
     role: "Backend Engineer",
@@ -437,6 +320,7 @@ export const projects: Project[] = [
     ],
     codeSnippet: `await roles.attachPermissions({\n  roleId,\n  permissionIds,\n  updatedBy: admin.id,\n});`,
     gallery: ["/images/projects/kinetic-planner.png"],
+    visibility: "public",
   },
   {
     slug: "awari-autonomous-root-cause-engineering",
@@ -445,8 +329,18 @@ export const projects: Project[] = [
     description:
       "Àwárí is an AI agent investigating 14 correlated signals across 3 services to surface likely root causes faster.",
     image: "/images/projects/orbit-commerce.png",
-    stack: ["AI Agents", "Observability", "Root-Cause Analysis", "Signals", "GitHub"],
-    metrics: ["14 correlated signals", "3 services", "Autonomous investigation"],
+    stack: [
+      "AI Agents",
+      "Observability",
+      "Root-Cause Analysis",
+      "Signals",
+      "GitHub",
+    ],
+    metrics: [
+      "14 correlated signals",
+      "3 services",
+      "Autonomous investigation",
+    ],
     githubUrl: "https://github.com/AdebayoAkingbade/Awari",
     year: "2026",
     role: "Builder",
@@ -494,6 +388,7 @@ export const projects: Project[] = [
     ],
     codeSnippet: `const investigation = await awari.investigate({\n  signals,\n  services,\n  window: incidentWindow,\n});`,
     gallery: ["/images/projects/orbit-commerce.png"],
+    visibility: "public",
   },
   {
     slug: "ostec-se-cybersecurity-platform",
@@ -503,7 +398,11 @@ export const projects: Project[] = [
       "A cybersecurity platform experience focused on clear service presentation, trust-building flows, and responsive delivery.",
     image: "/images/projects/kinetic-planner.png",
     stack: ["React", "TypeScript", "Responsive UI", "Vercel"],
-    metrics: ["Security-focused UX", "Responsive delivery", "Live platform"],
+    metrics: [
+      "Security-focused UX",
+      "Responsive delivery",
+      "Live platform",
+    ],
     liveUrl: "https://ostec-se.vercel.app/board-reports",
     year: "2026",
     role: "Frontend Engineer",
@@ -551,6 +450,7 @@ export const projects: Project[] = [
     ],
     codeSnippet: `const service = services.find((item) =>\n  item.slug === selectedService,\n);`,
     gallery: ["/images/projects/kinetic-planner.png"],
+    visibility: "public",
   },
   {
     slug: "kudipal",
@@ -563,6 +463,7 @@ export const projects: Project[] = [
     image: "/images/projects/atlas-observability.png",
     stack: ["Next.js", "React", "TypeScript", "AI Integration", "System Design"],
     metrics: ["In Development", "AI Product", "Private Beta"],
+    liveUrl: "https://nigeria-first-ai-ops-copilot.vercel.app/",
     year: "2025",
     role: "Founder / Product Engineer",
     visibility: "stealth",
@@ -577,99 +478,52 @@ export const projects: Project[] = [
       "System Design",
     ],
     problem:
-      "Proprietary AI initiative under active development. Architectural capabilities and engineering rigor are demonstrated while protecting unreleased product mechanics.",
-    research: [],
-    planning: [],
-    architecture: [],
-    systemDesign: [],
-    challenges: [],
-    solutions: [],
-    performance: [],
-    lessons: [],
-    codeSnippet: "",
-    gallery: [],
+      "Nigerian SMEs need practical digital tools that meet them inside WhatsApp instead of forcing daily business operations into unfamiliar software.",
+    research: [
+      "Studied how SME owners coordinate sales, customers, payments, and records through WhatsApp.",
+      "Identified where lightweight automation could reduce repeated operational work.",
+      "Shaped the platform around Nigerian business habits rather than generic SME assumptions.",
+    ],
+    planning: [
+      "Defined WhatsApp-first workflows for common SME operations and customer touchpoints.",
+      "Planned the product around quick adoption, clear actions, and familiar interaction patterns.",
+      "Built the public product surface so the concept could be tested and shared quickly.",
+    ],
+    architecture: [
+      "Next.js and React power the product interface and workflow shell.",
+      "WhatsApp-centered flows keep operations close to how SMEs already communicate.",
+      "Vercel deployment supports fast iteration and public demos.",
+    ],
+    systemDesign: [
+      "SME workflows are organized around familiar WhatsApp-style actions.",
+      "Operational records stay connected to customer and business activity.",
+      "The platform keeps core actions lightweight so business owners can move quickly.",
+    ],
+    challenges: [
+      "The platform needed to feel local and practical, not like generic business software.",
+      "SME tools have to be useful without adding admin overhead.",
+      "The experience needed to communicate value quickly for busy business owners.",
+    ],
+    solutions: [
+      "Centered the product story on WhatsApp-first SME operations.",
+      "Kept the interface focused on the actions users need to take next.",
+      "Built the product around Nigerian SME context as a core requirement.",
+    ],
+    performance: [
+      "Delivered a public product for a WhatsApp-first Nigerian SME platform.",
+      "Made the value proposition visible through focused product flows.",
+      "Kept the product lightweight enough for fast iteration.",
+    ],
+    lessons: [
+      "SME products land better when they match the user's real operating environment.",
+      "Local context is a product requirement, not a marketing detail.",
+      "A familiar channel can make business software feel much easier to adopt.",
+    ],
+    codeSnippet: `const workflow = await kudipal.createWorkflow({\n  channel: "whatsapp",\n  businessId,\n  action,\n});`,
+    gallery: ["/images/projects/atlas-observability.png"],
   },
 ];
 
-export function getProjectBySlug(slug: string): Project | undefined {
-  return projects.find((p) => p.slug === slug);
+export function getPrivateProjectBySlug(slug: string): Project | undefined {
+  return rawProjects.find((p) => p.slug === slug);
 }
-
-export const achievements: Achievement[] = [
-  {
-    label: "Performance",
-    value: "100",
-    detail:
-      "Built fast, maintainable interfaces across React, Next.js, Angular, and TypeScript.",
-  },
-  {
-    label: "Security",
-    value: "AA+",
-    detail:
-      "Delivered SSO, RBAC, maker-checker, and audit-backed workflows for sensitive systems.",
-  },
-  {
-    label: "Scale",
-    value: "30+",
-    detail: "Supported Ecobank digital banking operations across 30+ affiliates.",
-  },
-  {
-    label: "Mentorship",
-    value: "Team",
-    detail: "Mentored junior engineers and led frontend delivery patterns at Conclase.",
-  },
-];
-
-export const testimonials: Testimonial[] = [
-  {
-    quote:
-      "Crown brings rare range: product taste, systems thinking, and the discipline to make ambitious interfaces feel calm.",
-    name: "Damilola.",
-    role: "Project Manager",
-    company: "Conclase",
-  },
-  {
-    quote:
-      "He turned a messy operational workflow into a fast, trustworthy product surface our engineers actually enjoy using.",
-    name: "Chuks",
-    role: "Senior Frontend Engineer",
-    company: "Lead Way",
-  },
-  {
-    quote:
-      "The work landed with polish, but what stood out was the architecture underneath. It was built to keep evolving.",
-    name: "Foluso",
-    role: "Line Manager",
-    company: "Axa Mansard",
-  },
-];
-
-export const blogPosts: BlogPost[] = [
-  {
-    slug: "engineering-for-motion",
-    title: "Engineering for Motion Without Burning the Main Thread",
-    description:
-      "A practical framework for adding expressive interaction while preserving responsiveness and accessibility.",
-    date: "2026-05-18",
-    readTime: "6 min",
-    tags: ["Motion", "Performance", "Frontend"],
-  },
-  {
-    slug: "reliable-ai-interfaces",
-    title: "Reliable AI Interfaces Start With Boring Product Constraints",
-    description:
-      "Why good AI UX is mostly boundaries, auditability, latency budgets, and honest fallback states.",
-    date: "2026-04-11",
-    readTime: "7 min",
-    tags: ["AI", "Product", "Architecture"],
-  },
-  {
-    slug: "designing-systems-that-feel-fast",
-    title: "Designing Systems That Feel Fast",
-    description:
-      "Perceived speed is a collaboration between data loading, hierarchy, animation, and microcopy.",
-    date: "2026-03-02",
-    readTime: "5 min",
-    tags: ["Design Systems", "UX", "React"],
-  },
-];

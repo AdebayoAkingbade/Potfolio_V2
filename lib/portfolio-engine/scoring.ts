@@ -85,28 +85,33 @@ export function calculatePortfolioScore(draft: PortfolioDraft): PortfolioScoreRe
     ),
   );
 
-  const completeProjects = draft.projects.filter(
-    (item) => item.title && item.summary && item.outcome,
-  ).length;
+  const completeProjects = draft.projects.filter((item) => {
+    if (item.visibility === "stealth") {
+      return Boolean(item.title && (item.summary || item.role));
+    }
+    return Boolean(item.title && item.summary && item.outcome);
+  }).length;
   checks.push(
     scoreCheck(
       "projects",
       "Project evidence",
       completeProjects >= 3 ? 20 : completeProjects === 2 ? 14 : completeProjects === 1 ? 8 : 0,
       20,
-      "Projects should include context, your role, and outcomes.",
+      "Projects should include context, your role, and outcomes (confidential and stealth projects recognized).",
     ),
   );
 
   const hasProof =
-    draft.projects.some((project) => project.links.length > 0) || basics.socialLinks.length > 0;
+    draft.projects.some(
+      (project) => project.links.length > 0 || project.visibility === "stealth",
+    ) || basics.socialLinks.length > 0;
   checks.push(
     scoreCheck(
       "proof",
       "External proof",
       hasProof ? 10 : 0,
       10,
-      "Links to work, profiles, publications, or demos make the portfolio more trustworthy.",
+      "Links to work, profiles, publications, demos, or recognized stealth initiatives make the portfolio more trustworthy.",
     ),
   );
 

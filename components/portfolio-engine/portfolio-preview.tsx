@@ -296,62 +296,101 @@ export function PortfolioPreview({
           <h2 className="font-display text-2xl font-semibold">Selected Work</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          {portfolio.projects.slice(0, compact ? 2 : 6).map((project) => (
-            <article
-              key={project.id}
-              data-portfolio-project={project.title || "Project"}
-              className="rounded-md border border-border bg-background/60 p-4"
-            >
-              <p className="font-semibold">{project.title || "Project title"}</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {project.summary || "Project summary and contribution will appear here."}
-              </p>
-              {project.outcome ? (
-                <p className="mt-3 text-sm text-primary">{project.outcome}</p>
-              ) : null}
-              {project.videos.length ? (
-                <div className="mt-4 grid gap-3">
-                  {project.videos.slice(0, compact ? 1 : 3).map((video) => {
-                    const videoSrc = video.url ?? video.dataUrl;
-                    return videoSrc ? (
-                      <div key={video.id} className="overflow-hidden rounded-md border border-border">
-                        <video
-                          controls
-                          preload="metadata"
-                          src={videoSrc}
-                          className="aspect-video w-full bg-muted object-cover"
-                        />
+          {portfolio.projects
+            .filter((project) => project.visibility !== "private")
+            .slice(0, compact ? 2 : 6)
+            .map((project) => {
+              const isStealth = project.visibility === "stealth";
+
+              return (
+                <article
+                  key={project.id}
+                  data-portfolio-project={project.title || "Project"}
+                  className="rounded-md border border-border bg-background/60 p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold">{project.title || "Project title"}</p>
+                    {isStealth ? (
+                      <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500 border border-amber-500/20">
+                        {project.statusText || "In Development · Stealth"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    {project.summary || "Project summary and contribution will appear here."}
+                  </p>
+                  {isStealth ? (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Capabilities Demonstrated:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(project.safeCapabilities?.length ? project.safeCapabilities : [
+                          "AI Product Development",
+                          "Product Architecture",
+                          "Full-Stack Engineering",
+                        ]).map((cap) => (
+                          <span
+                            key={cap}
+                            className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground font-medium"
+                          >
+                            {cap}
+                          </span>
+                        ))}
                       </div>
-                    ) : (
-                      <div
-                        key={video.id}
-                        className="flex items-center gap-2 rounded-md border border-border p-3 text-sm text-muted-foreground"
-                      >
-                        <PlayCircle className="h-4 w-4 text-primary" />
-                        {video.name}
+                      <p className="mt-2 text-xs italic text-muted-foreground">
+                        Details available on request
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {project.outcome ? (
+                        <p className="mt-3 text-sm text-primary">{project.outcome}</p>
+                      ) : null}
+                      {project.videos.length ? (
+                        <div className="mt-4 grid gap-3">
+                          {project.videos.slice(0, compact ? 1 : 3).map((video) => {
+                            const videoSrc = video.url ?? video.dataUrl;
+                            return videoSrc ? (
+                              <div key={video.id} className="overflow-hidden rounded-md border border-border">
+                                <video
+                                  controls
+                                  preload="metadata"
+                                  src={videoSrc}
+                                  className="aspect-video w-full bg-muted object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                key={video.id}
+                                className="flex items-center gap-2 rounded-md border border-border p-3 text-sm text-muted-foreground"
+                              >
+                                <PlayCircle className="h-4 w-4 text-primary" />
+                                {video.name}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        {project.links.map((link) => (
+                          <a
+                            key={link.id}
+                            href={link.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            data-portfolio-event={linkEventType(link.label, link.url)}
+                            data-portfolio-section={project.title || link.label || "Project"}
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            {link.label || "Link"}
+                            <ArrowUpRight className="h-3 w-3" />
+                          </a>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-              <div className="mt-4 flex flex-wrap gap-3">
-                {project.links.map((link) => (
-                  <a
-                    key={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    data-portfolio-event={linkEventType(link.label, link.url)}
-                    data-portfolio-section={project.title || link.label || "Project"}
-                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {link.label || "Link"}
-                    <ArrowUpRight className="h-3 w-3" />
-                  </a>
-                ))}
-              </div>
-            </article>
-          ))}
+                    </>
+                  )}
+                </article>
+              );
+            })}
         </div>
       </section>
       {!hasPortfolioFeature(portfolio, "removeBranding") ? (

@@ -106,7 +106,7 @@ describe("Distributed / In-Memory Rate Limiter", () => {
     expect(result.ok).toBe(true);
     expect(result.remaining).toBe(4);
     expect(rpcCalledWith).not.toBeNull();
-    const params = rpcCalledWith as Record<string, unknown>;
+    const params = rpcCalledWith as unknown as Record<string, unknown>;
     expect(params.p_operation).toBe("ai_rewrite");
     expect(params.p_limit).toBe(5);
     expect(params.p_window_seconds).toBe(60);

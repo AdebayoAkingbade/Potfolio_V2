@@ -140,7 +140,7 @@ function createMockSupabaseDatabase() {
           },
           update: (updates: Partial<{ is_live: boolean; deleted_at: string }>) => ({
             eq: (col1: string, val1: string | boolean) => ({
-              eq: (_col2: string, _val2: unknown) => {
+              eq: () => {
                 for (const p of publications) {
                   if (col1 === "source_draft_id" && p.source_draft_id === val1) {
                     Object.assign(p, updates);

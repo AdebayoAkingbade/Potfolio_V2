@@ -25,9 +25,18 @@ import {
   Users,
   Video,
   WandSparkles,
+  Zap,
+  Sparkles,
 } from "lucide-react";
 
 import { PortfolioPreview } from "@/components/portfolio-engine/portfolio-preview";
+import { CareerIntelligencePanel } from "@/components/portfolio-engine/career-intelligence-panel";
+import { AiSuggestionModal, type AiSuggestionData } from "@/components/portfolio-engine/ai-suggestion-modal";
+import {
+  DEMO_PROFILES_META,
+  getDemoProfile,
+  type DemoProfileKey,
+} from "@/lib/portfolio-engine/career/demo-profiles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -303,10 +312,19 @@ export function PortfolioCreateWizard({
   const [githubUsername, setGithubUsername] = React.useState("");
   const [domainInput, setDomainInput] = React.useState(initialDraft?.customDomain?.hostname ?? "");
   const [inviteEmail, setInviteEmail] = React.useState("");
+  const [pendingAiSuggestion, setPendingAiSuggestion] = React.useState<AiSuggestionData | null>(null);
+  const [showIntelligencePanel, setShowIntelligencePanel] = React.useState(true);
   const profession = getProfessionConfig(draft.profession);
   const score = calculatePortfolioScore(draft);
   const isLastStep = step === steps.length - 1;
   const isServerMode = persistenceMode === "server";
+
+  const loadDemo = (demoKey: DemoProfileKey) => {
+    const demoDraft = getDemoProfile(demoKey);
+    setDraft(demoDraft);
+    setActionState(`Loaded ${demoDraft.basics.title} demo`);
+    setTimeout(() => setActionState(""), 4000);
+  };
 
   React.useEffect(() => {
     if (isServerMode) {
@@ -604,71 +622,94 @@ export function PortfolioCreateWizard({
 
   const rewriteSummary = async () => {
     const fallback = buildSummarySuggestion(draft);
+    let proposed = fallback;
+    let source = "rules";
 
-    if (!isServerMode) {
-      updateBasics("summary", fallback);
-      return;
-    }
+    if (isServerMode) {
+      setActionState("Generating AI rewrite...");
+      const response = await fetch("/api/portfolio-engine/ai/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draft,
+          target: "summary",
+          text: draft.basics.summary,
+        }),
+      }).catch(() => null);
 
-    setActionState("Rewriting with OpenAI");
-    const response = await fetch("/api/portfolio-engine/ai/rewrite", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        draft,
-        target: "summary",
-        text: draft.basics.summary,
-      }),
-    }).catch(() => null);
-
-    if (!response?.ok) {
+      if (response?.ok) {
+        const data = (await response.json()) as { rewrite?: string; source?: string };
+        if (data.rewrite) proposed = data.rewrite;
+        if (data.source) source = data.source;
+      }
       setActionState("");
-      setErrors([response ? await readError(response, "Could not rewrite summary.") : "Could not rewrite summary."]);
-      return;
     }
 
-    const data = (await response.json()) as { rewrite?: string; source?: string };
-    updateBasics("summary", data.rewrite || fallback);
-    setActionState(data.source === "openai" ? "Rewritten with OpenAI" : "Local rewrite applied");
+    setPendingAiSuggestion({
+      title: "AI Rewrite for Professional Summary",
+      field: "Summary",
+      originalText: draft.basics.summary,
+      proposedText: proposed,
+      reason: `Refined for ${profession.label} to elevate measurable impact, domain terminology, and clear executive positioning.`,
+      source,
+      onAccept: (text) => {
+        updateBasics("summary", text);
+        setActionState("AI summary update applied");
+        setTimeout(() => setActionState(""), 4000);
+      },
+      onDiscard: () => {
+        setActionState("AI suggestion discarded");
+        setTimeout(() => setActionState(""), 4000);
+      },
+    });
   };
 
   const rewriteProjectSummary = async (project: PortfolioProject) => {
     const fallback = buildProjectSuggestion(project, draft);
+    let proposed = fallback;
+    let source = "rules";
 
-    if (!isServerMode) {
-      updateProject(project.id, (item) => ({
-        ...item,
-        summary: fallback,
-      }));
-      return;
-    }
+    if (isServerMode) {
+      setActionState("Generating AI project rewrite...");
+      const response = await fetch("/api/portfolio-engine/ai/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draft,
+          target: "project",
+          projectId: project.id,
+          text: project.summary,
+        }),
+      }).catch(() => null);
 
-    setActionState("Rewriting project with OpenAI");
-    const response = await fetch("/api/portfolio-engine/ai/rewrite", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        draft,
-        target: "project",
-        projectId: project.id,
-        text: project.summary,
-      }),
-    }).catch(() => null);
-
-    if (!response?.ok) {
+      if (response?.ok) {
+        const data = (await response.json()) as { rewrite?: string; source?: string };
+        if (data.rewrite) proposed = data.rewrite;
+        if (data.source) source = data.source;
+      }
       setActionState("");
-      setErrors([
-        response ? await readError(response, "Could not rewrite project summary.") : "Could not rewrite project summary.",
-      ]);
-      return;
     }
 
-    const data = (await response.json()) as { rewrite?: string; source?: string };
-    updateProject(project.id, (item) => ({
-      ...item,
-      summary: data.rewrite || fallback,
-    }));
-    setActionState(data.source === "openai" ? "Rewritten with OpenAI" : "Local rewrite applied");
+    setPendingAiSuggestion({
+      title: `AI Rewrite for "${project.title}"`,
+      field: "Project Summary",
+      originalText: project.summary,
+      proposedText: proposed,
+      reason: `Reframed around problem context, engineering/clinical/commercial methodology, and quantifiable outcomes.`,
+      source,
+      onAccept: (text) => {
+        updateProject(project.id, (item) => ({
+          ...item,
+          summary: text,
+        }));
+        setActionState(`AI rewrite applied to ${project.title}`);
+        setTimeout(() => setActionState(""), 4000);
+      },
+      onDiscard: () => {
+        setActionState("AI suggestion discarded");
+        setTimeout(() => setActionState(""), 4000);
+      },
+    });
   };
 
   const importResume = async () => {
@@ -1027,27 +1068,100 @@ export function PortfolioCreateWizard({
   const renderStep = () => {
     if (step === 0) {
       return (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {professionConfigs.map((item) => {
-            const active = draft.profession === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setProfession(item.key)}
-                aria-pressed={active}
-                className={cn(
-                  "min-h-[150px] rounded-lg border border-border bg-card p-5 text-left transition hover:border-primary/60 hover:bg-primary/5",
-                  active && "border-primary bg-primary/10",
-                )}
-              >
-                <p className="font-display text-xl font-semibold">{item.label}</p>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  {item.description}
+        <div className="space-y-8">
+          {/* Executive Demo Personas */}
+          <div className="rounded-xl border border-primary/30 bg-primary/[0.03] p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <h3 className="font-display text-xl font-bold text-foreground">
+                    Executive Demo Personas (1-Click Instant Load)
+                  </h3>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Load an authentic, end-to-end professional profile to immediately evaluate Career Intelligence, maturity scoring, and safe stealth protection.
                 </p>
-              </button>
-            );
-          })}
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {DEMO_PROFILES_META.map((demo) => {
+                const isActive =
+                  (demo.profession === "software-technology" && draft.profession === "software-technology") ||
+                  (demo.profession === "healthcare" && draft.profession === "healthcare") ||
+                  (demo.profession === "sales" && draft.profession === "sales") ||
+                  (demo.profession === "students-graduates" && draft.profession === "students-graduates");
+
+                return (
+                  <button
+                    key={demo.key}
+                    type="button"
+                    onClick={() => loadDemo(demo.key)}
+                    className={cn(
+                      "flex flex-col justify-between rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60 hover:bg-primary/5",
+                      isActive && "border-primary bg-primary/10 ring-1 ring-primary/40",
+                    )}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-2xl">
+                          {demo.key === "software-engineer" && "💻"}
+                          {demo.key === "nurse" && "🩺"}
+                          {demo.key === "sales-executive" && "💼"}
+                          {demo.key === "student-graduate" && "🎓"}
+                        </span>
+                        <Badge variant="outline" className="text-[10px]">
+                          {demo.badge}
+                        </Badge>
+                      </div>
+                      <h4 className="mt-3 font-display text-base font-semibold text-foreground">
+                        {demo.label}
+                      </h4>
+                      <p className="mt-1 text-xs text-primary font-medium">
+                        {demo.roleTitle}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground line-clamp-3">
+                        {demo.summary}
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs font-medium text-primary">
+                      <span>{isActive ? "Currently Active" : "Load Persona"}</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-display text-xl font-semibold mb-4 text-foreground">
+              Or Choose a Professional Domain
+            </h3>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {professionConfigs.map((item) => {
+                const active = draft.profession === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setProfession(item.key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "min-h-[150px] rounded-lg border border-border bg-card p-5 text-left transition hover:border-primary/60 hover:bg-primary/5",
+                      active && "border-primary bg-primary/10",
+                    )}
+                  >
+                    <p className="font-display text-xl font-semibold">{item.label}</p>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       );
     }
@@ -1342,7 +1456,12 @@ export function PortfolioCreateWizard({
 
     if (step === 4) {
       return (
-        <div className="grid gap-4">
+        <div className="grid gap-6">
+          <CareerIntelligencePanel
+            draft={draft}
+            onUpdateDraft={setDraft}
+            onLoadDemoProfile={loadDemo}
+          />
           {draft.experience.map((experience, index) => (
             <article
               key={experience.id}
@@ -1706,6 +1825,52 @@ export function PortfolioCreateWizard({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Visibility:</span>
+                  <div className="flex rounded-md border border-border bg-background p-0.5 text-xs">
+                    {(["public", "stealth", "private"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() =>
+                          updateProject(project.id, (item) => ({
+                            ...item,
+                            visibility: mode,
+                          }))
+                        }
+                        className={`rounded px-2.5 py-1 font-medium capitalize transition-colors ${
+                          (project.visibility || "public") === mode
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {project.visibility === "stealth" ? (
+                  <span className="rounded bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-400 border border-amber-500/30">
+                    Stealth: Links & sensitive details protected
+                  </span>
+                ) : project.visibility === "private" ? (
+                  <span className="rounded bg-zinc-500/15 px-2.5 py-0.5 text-xs font-medium text-zinc-400 border border-zinc-500/30">
+                    Private: Hidden from public portfolio
+                  </span>
+                ) : null}
+              </div>
+
+              {project.visibility === "stealth" ? (
+                <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  🛡️ <strong>Stealth Mode Active:</strong> Public links (demo, repo), video demos, and sensitive implementation details will <strong>not</strong> be shown on your public portfolio. They remain safely preserved in this builder.
+                </div>
+              ) : project.visibility === "private" ? (
+                <div className="mb-4 rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  🔒 <strong>Private Project:</strong> This project is completely hidden from public visitors. You may manage it here in your private workspace.
+                </div>
+              ) : null}
+
               <div className="grid gap-5 md:grid-cols-2">
                 <Field label="Project title">
                   <Input
@@ -1766,6 +1931,14 @@ export function PortfolioCreateWizard({
                 </Field>
               </div>
               <div className="mt-5 grid gap-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-muted-foreground">Project links</p>
+                  {project.visibility === "stealth" ? (
+                    <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400 border border-amber-500/20">
+                      Not shown publicly (Stealth active)
+                    </span>
+                  ) : null}
+                </div>
                 {project.links.map((link) => (
                   <div key={link.id} className="grid gap-2 md:grid-cols-[180px_1fr_auto]">
                     <Input
@@ -1813,9 +1986,16 @@ export function PortfolioCreateWizard({
                 ))}
               </div>
               <div className="mt-5 rounded-md border border-border bg-background/60 p-4">
-                <div className="flex items-center gap-2">
-                  <Video className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-medium">Project videos</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-medium">Project videos</p>
+                  </div>
+                  {project.visibility === "stealth" ? (
+                    <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400 border border-amber-500/20">
+                      Not shown publicly (Stealth active)
+                    </span>
+                  ) : null}
                 </div>
                 <label className="mt-3 flex min-h-11 items-center gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm">
                   <UploadCloud className="h-4 w-4 text-primary" />
@@ -2200,6 +2380,65 @@ export function PortfolioCreateWizard({
             </div>
           </div>
 
+          {/* Quick Demo Switcher Bar */}
+          <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                Demo Personas:
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {DEMO_PROFILES_META.map((demo) => {
+                const isActive =
+                  (demo.profession === "software-technology" && draft.profession === "software-technology") ||
+                  (demo.profession === "healthcare" && draft.profession === "healthcare") ||
+                  (demo.profession === "sales" && draft.profession === "sales") ||
+                  (demo.profession === "students-graduates" && draft.profession === "students-graduates");
+
+                return (
+                  <Button
+                    key={demo.key}
+                    type="button"
+                    size="sm"
+                    variant={isActive ? "default" : "outline"}
+                    className={`h-8 px-3 text-xs font-medium ${
+                      isActive ? "bg-primary text-primary-foreground" : "border-border hover:border-primary"
+                    }`}
+                    onClick={() => loadDemo(demo.key)}
+                  >
+                    {demo.key === "software-engineer" && "💻 "}
+                    {demo.key === "nurse" && "🩺 "}
+                    {demo.key === "sales-executive" && "💼 "}
+                    {demo.key === "student-graduate" && "🎓 "}
+                    {demo.label}
+                  </Button>
+                );
+              })}
+              <Button
+                type="button"
+                size="sm"
+                variant={showIntelligencePanel ? "secondary" : "outline"}
+                className="h-8 px-3 text-xs font-medium border-primary/40 text-primary hover:bg-primary/10 sm:ml-auto"
+                onClick={() => setShowIntelligencePanel((prev) => !prev)}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                {showIntelligencePanel ? "Hide Career Intelligence" : "Career Intelligence"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Persistent Career Intelligence Drawer (when open and not on step 4 where it's embedded) */}
+          {showIntelligencePanel && step !== 4 ? (
+            <div className="mb-8">
+              <CareerIntelligencePanel
+                draft={draft}
+                onUpdateDraft={setDraft}
+                onLoadDemoProfile={loadDemo}
+              />
+            </div>
+          ) : null}
+
           <div className="mb-8 overflow-x-auto pb-2 no-scrollbar">
             <div className="flex min-w-max gap-2">
               {steps.map((label, index) => (
@@ -2275,6 +2514,11 @@ export function PortfolioCreateWizard({
           </div>
         </div>
       </section>
+      <AiSuggestionModal
+        suggestion={pendingAiSuggestion}
+        open={Boolean(pendingAiSuggestion)}
+        onClose={() => setPendingAiSuggestion(null)}
+      />
     </main>
   );
 }

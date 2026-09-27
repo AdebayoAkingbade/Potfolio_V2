@@ -67,7 +67,7 @@ describe("Stripe Webhook Signature & Fail-Closed Behavior (Gates 2 & 3)", () => 
 
     try {
       // NODE_ENV is read-only in TypeScript typings; use defineProperty to override in tests
-      Object.defineProperty(process.env, "NODE_ENV", { value: "production", configurable: true });
+      (process.env as Record<string, string | undefined>).NODE_ENV = "production";
       delete process.env.STRIPE_WEBHOOK_SECRET;
 
       const req = new Request("http://localhost:3000/api/portfolio-engine/billing/webhook", {
@@ -82,7 +82,7 @@ describe("Stripe Webhook Signature & Fail-Closed Behavior (Gates 2 & 3)", () => 
       const json = await response.json();
       expect(json.error).toContain("configuration failure");
     } finally {
-      Object.defineProperty(process.env, "NODE_ENV", { value: "test", configurable: true });
+      (process.env as Record<string, string | undefined>).NODE_ENV = "test";
       process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
     }
   });

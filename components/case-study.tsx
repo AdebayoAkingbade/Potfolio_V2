@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Github } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Github, Lock, Shield } from "lucide-react";
 
 import type { Project } from "@/types/site";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 function DetailList({ title, items }: { title: string; items: string[] }) {
+  if (!items || items.length === 0) return null;
   return (
     <section className="rounded-lg border border-border bg-card p-6">
       <h2 className="font-display text-2xl font-semibold">{title}</h2>
@@ -22,6 +23,8 @@ function DetailList({ title, items }: { title: string; items: string[] }) {
 }
 
 export function CaseStudy({ project }: { project: Project }) {
+  const isStealth = project.visibility === "stealth";
+
   return (
     <main className="pt-28">
       <section className="container">
@@ -34,9 +37,16 @@ export function CaseStudy({ project }: { project: Project }) {
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px] lg:items-end">
           <div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge>{project.category}</Badge>
-              <Badge variant="outline">{project.year}</Badge>
+              {isStealth ? (
+                <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-400 font-medium">
+                  <Lock className="mr-1 h-3 w-3 inline" />
+                  {project.statusText || "AI Product · In Development"}
+                </Badge>
+              ) : (
+                <Badge variant="outline">{project.year}</Badge>
+              )}
               <Badge variant="secondary">{project.role}</Badge>
             </div>
             <h1 className="mt-6 max-w-4xl text-balance font-display text-5xl font-semibold tracking-normal md:text-7xl">
@@ -48,18 +58,32 @@ export function CaseStudy({ project }: { project: Project }) {
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5">
-            <p className="text-sm uppercase tracking-[0.22em] text-muted-foreground">Metrics</p>
+            <p className="text-sm uppercase tracking-[0.22em] text-muted-foreground">
+              {isStealth ? "Project Status" : "Metrics"}
+            </p>
             <div className="mt-5 grid gap-3">
               {project.metrics.map((metric) => (
                 <div
                   key={metric}
-                  className="rounded-md border border-border bg-muted/[0.35] p-3"
+                  className="flex items-center gap-2 rounded-md border border-border bg-muted/[0.35] p-3 text-sm"
                 >
+                  {isStealth ? (
+                    <Shield className="h-4 w-4 text-amber-400" />
+                  ) : null}
                   {metric}
                 </div>
               ))}
             </div>
-            {project.liveUrl || project.githubUrl ? (
+            {isStealth ? (
+              <div className="mt-5">
+                <Button asChild className="w-full">
+                  <Link href="/#contact">
+                    {project.safeCtaLabel || "Details Available on Request"}
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            ) : project.liveUrl || project.githubUrl ? (
               <div className="mt-5 flex flex-wrap gap-2">
                 {project.liveUrl ? (
                   <Button asChild size="sm">
@@ -94,71 +118,162 @@ export function CaseStudy({ project }: { project: Project }) {
         </div>
       </section>
 
-      <section className="container section-pad">
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-lg border border-border bg-card p-6">
-            <p className="text-sm uppercase tracking-[0.22em] text-muted-foreground">Problem</p>
-            <h2 className="mt-4 font-display text-3xl font-semibold">The work started here.</h2>
-            <p className="mt-5 leading-8 text-muted-foreground">{project.problem}</p>
+      {isStealth ? (
+        <section className="container section-pad space-y-6">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-6 md:p-8">
+            <div className="flex items-center gap-2 text-amber-400">
+              <Shield className="h-5 w-5" />
+              <h2 className="font-display text-2xl font-semibold">
+                Confidential AI Initiative · In Active Development
+              </h2>
+            </div>
+            <p className="mt-4 leading-8 text-muted-foreground">
+              This project is currently under active engineering. To safeguard intellectual property prior
+              to public availability, exact system prompts, proprietary workflows, internal algorithms,
+              and private source repositories are intentionally restricted from public exposure.
+            </p>
           </div>
-          <DetailList title="Research" items={project.research} />
-        </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <DetailList title="Planning" items={project.planning} />
-          <DetailList title="Architecture Highlights" items={project.architecture} />
-          <DetailList title="System Design" items={project.systemDesign} />
-          <DetailList title="Challenges" items={project.challenges} />
-          <DetailList title="Solutions" items={project.solutions} />
-          <DetailList title="Performance" items={project.performance} />
-        </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-lg border border-border bg-card p-6 md:p-8">
+              <h2 className="font-display text-2xl font-semibold">Capabilities Demonstrated</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Key professional engineering and architecture disciplines evidenced by this project:
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {(project.capabilitiesDemonstrated ?? [
+                  "AI Product Development",
+                  "Product Architecture",
+                  "Full-Stack Engineering",
+                  "System Design",
+                ]).map((cap) => (
+                  <span
+                    key={cap}
+                    className="rounded-md border border-border/80 bg-muted px-3 py-1.5 text-sm font-medium"
+                  >
+                    {cap}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-        <section className="mt-6 rounded-lg border border-border bg-card p-6">
-          <h2 className="font-display text-2xl font-semibold">Tech Stack</h2>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {project.stack.map((tech) => (
-              <Badge key={tech} variant="outline">
-                {tech}
-              </Badge>
-            ))}
+            <div className="rounded-lg border border-border bg-card p-6 md:p-8">
+              <h2 className="font-display text-2xl font-semibold">Architecture & Scope</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Role and engineering scope for this initiative:
+              </p>
+              <div className="mt-5 space-y-3 text-muted-foreground leading-7">
+                <p>
+                  <strong>Role:</strong> {project.role}
+                </p>
+                <p>
+                  <strong>Status:</strong> {project.developmentStatus || "In Development"} ({project.year})
+                </p>
+                <p>
+                  Comprehensive architectural notes, system topology briefings, and code walkthroughs
+                  can be arranged during confidential technical evaluation.
+                </p>
+              </div>
+            </div>
           </div>
+
+          <section className="rounded-lg border border-border bg-card p-6 md:p-8">
+            <h2 className="font-display text-2xl font-semibold">Core Technologies</h2>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {project.stack.map((tech) => (
+                <Badge key={tech} variant="outline" className="text-sm py-1 px-3">
+                  {tech}
+                </Badge>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-border bg-card p-6 md:p-8 text-center space-y-4">
+            <h2 className="font-display text-2xl font-semibold">Interested in Discussing This Initiative?</h2>
+            <p className="max-w-xl mx-auto text-muted-foreground">
+              I am happy to discuss high-level engineering methodologies, architectural decisions, and product strategy in a confidential setting.
+            </p>
+            <div className="pt-2">
+              <Button asChild size="lg">
+                <Link href="/#contact">
+                  Discuss This Project
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </section>
         </section>
-
-        <section className="mt-6 rounded-lg border border-border bg-[#090b0f] p-6 text-white">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-rose" />
-            <span className="h-3 w-3 rounded-full bg-ember" />
-            <span className="h-3 w-3 rounded-full bg-mint" />
+      ) : (
+        <section className="container section-pad">
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <p className="text-sm uppercase tracking-[0.22em] text-muted-foreground">Problem</p>
+              <h2 className="mt-4 font-display text-3xl font-semibold">The work started here.</h2>
+              <p className="mt-5 leading-8 text-muted-foreground">{project.problem}</p>
+            </div>
+            <DetailList title="Research" items={project.research} />
           </div>
-          <h2 className="font-display text-2xl font-semibold">Code Snippet</h2>
-          <pre className="mt-5 overflow-x-auto rounded-md border border-white/10 bg-white/5 p-4 text-sm leading-7 text-white/[0.78]">
-            <code>{project.codeSnippet}</code>
-          </pre>
-        </section>
 
-        <section className="mt-6 rounded-lg border border-border bg-card p-6">
-          <h2 className="font-display text-2xl font-semibold">Gallery & Animations</h2>
-          <p className="mt-3 leading-7 text-muted-foreground">
-            The final product uses subtle hover tilt, reveal choreography, and responsive image
-            transitions to make the case study feel alive without turning the page into a heavy
-            demo reel.
-          </p>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {project.gallery.concat(project.image).map((image, index) => (
-              <Image
-                key={`${image}-${index}`}
-                src={image}
-                alt={`${project.title} gallery image ${index + 1}`}
-                width={1586}
-                height={1003}
-                className="rounded-lg border border-border object-cover"
-              />
-            ))}
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <DetailList title="Planning" items={project.planning} />
+            <DetailList title="Architecture Highlights" items={project.architecture} />
+            <DetailList title="System Design" items={project.systemDesign} />
+            <DetailList title="Challenges" items={project.challenges} />
+            <DetailList title="Solutions" items={project.solutions} />
+            <DetailList title="Performance" items={project.performance} />
           </div>
-        </section>
 
-        <DetailList title="Lessons Learned" items={project.lessons} />
-      </section>
+          <section className="mt-6 rounded-lg border border-border bg-card p-6">
+            <h2 className="font-display text-2xl font-semibold">Tech Stack</h2>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {project.stack.map((tech) => (
+                <Badge key={tech} variant="outline">
+                  {tech}
+                </Badge>
+              ))}
+            </div>
+          </section>
+
+          {project.codeSnippet ? (
+            <section className="mt-6 rounded-lg border border-border bg-[#090b0f] p-6 text-white">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-rose" />
+                <span className="h-3 w-3 rounded-full bg-ember" />
+                <span className="h-3 w-3 rounded-full bg-mint" />
+              </div>
+              <h2 className="font-display text-2xl font-semibold">Code Snippet</h2>
+              <pre className="mt-5 overflow-x-auto rounded-md border border-white/10 bg-white/5 p-4 text-sm leading-7 text-white/[0.78]">
+                <code>{project.codeSnippet}</code>
+              </pre>
+            </section>
+          ) : null}
+
+          {project.gallery && project.gallery.length > 0 ? (
+            <section className="mt-6 rounded-lg border border-border bg-card p-6">
+              <h2 className="font-display text-2xl font-semibold">Gallery & Animations</h2>
+              <p className="mt-3 leading-7 text-muted-foreground">
+                The final product uses subtle hover tilt, reveal choreography, and responsive image
+                transitions to make the case study feel alive without turning the page into a heavy
+                demo reel.
+              </p>
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {project.gallery.concat(project.image).map((image, index) => (
+                  <Image
+                    key={`${image}-${index}`}
+                    src={image}
+                    alt={`${project.title} gallery image ${index + 1}`}
+                    width={1586}
+                    height={1003}
+                    className="rounded-lg border border-border object-cover"
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <DetailList title="Lessons Learned" items={project.lessons} />
+        </section>
+      )}
     </main>
   );
 }

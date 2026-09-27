@@ -144,6 +144,7 @@ export type PortfolioBasics = {
   contactPreference: ContactPreference;
   socialLinks: PortfolioSocialLink[];
   profilePhoto?: PortfolioAsset;
+  avatar?: string;
 };
 
 export type PortfolioExperience = {
@@ -175,6 +176,8 @@ export type PortfolioCertification = {
   url: string;
 };
 
+export type ProjectVisibility = "public" | "stealth" | "private";
+
 export type PortfolioProject = {
   id: string;
   title: string;
@@ -184,6 +187,15 @@ export type PortfolioProject = {
   outcome: string;
   links: PortfolioSocialLink[];
   videos: PortfolioVideoAsset[];
+  visibility?: ProjectVisibility;
+  statusText?: string;
+  developmentStatus?: "active" | "in-development" | "beta" | "completed";
+  safeDescription?: string;
+  safeCapabilities?: string[];
+  capabilitiesDemonstrated?: string[];
+  safeCtaLabel?: string;
+  skills?: string[];
+  tags?: string[];
 };
 
 export type PortfolioDraft = {
@@ -192,6 +204,8 @@ export type PortfolioDraft = {
   plan: PortfolioPlan;
   profession: ProfessionKey;
   templateId: PortfolioTemplateId;
+  template?: string;
+  theme?: string;
   slug: string;
   basics: PortfolioBasics;
   skills: string[];

@@ -168,6 +168,7 @@ export function createProject(): PortfolioProject {
     outcome: "",
     links: [createSocialLink("Project", "")],
     videos: [],
+    visibility: "public",
   };
 }
 

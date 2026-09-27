@@ -180,6 +180,10 @@ function certificationValue(value: unknown): PortfolioCertification {
 function projectValue(value: unknown): PortfolioProject {
   if (!isRecord(value)) return createProject();
 
+  const rawVis = typeof value.visibility === "string" ? value.visibility.toLowerCase() : "";
+  const visibility =
+    rawVis === "stealth" ? "stealth" : rawVis === "private" ? "private" : "public";
+
   return {
     id: idValue(value.id),
     title: stringValue(value.title),
@@ -193,6 +197,11 @@ function projectValue(value: unknown): PortfolioProject {
           .map(videoAssetValue)
           .filter((asset): asset is PortfolioVideoAsset => Boolean(asset))
       : [],
+    visibility,
+    statusText: typeof value.statusText === "string" ? value.statusText : undefined,
+    safeCapabilities: Array.isArray(value.safeCapabilities)
+      ? value.safeCapabilities.filter((c): c is string => typeof c === "string")
+      : undefined,
   };
 }
 
